@@ -205,7 +205,7 @@ class Game
 		{
 			Width = 8,
 			Height = 8,
-			Mines = Math.Clamp(m_State.Stage + startMineCount, startMineCount, 13)
+			Mines = Math.Clamp(startMineCount, startMineCount, 13)
 		};
 
 		Remake(newBoard);
@@ -336,11 +336,6 @@ class Game
 
 			m_State.Lives--;
 			m_State.State = (m_State.Lives <= 0) ? .GameOver : .Lose;
-
-			if (m_State.State == .GameOver)
-			{
-				m_SessionHighscore = m_State.Points;
-			}
 
 			for (let bx < m_Board.Width)
 			{
@@ -786,7 +781,6 @@ class Game
 			if (m_State.StageTimer.Elapsed.TotalSeconds >= 60.0f)
 			{
 				m_State.StartMineAdd++;
-
 				m_State.StageTimer.Restart();
 			}
 		}
@@ -1003,7 +997,12 @@ class Game
 			{
 				int invI = Math.Abs((int)(i - MAX_LIVES)) - 1;
 				bool noHeart = invI > (int)m_State.Lives - 1;
-				Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, .(noHeart ? 11 : 0, 0, 11, 10), .(6 + ((21 + -1) * invI), SCREEN_HEIGHT - 28, 11 * 2, 10 * 2), .Zero, 0, .White);
+
+				let heartSrcRec = Rectangle(noHeart ? 11 : 0, 0, 11, 10);
+				let heartDestRec = Rectangle(6 + ((21 + -1) * invI), SCREEN_HEIGHT - 28, 11 * 2, 10 * 2);
+
+				// Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec - .(2, -2, 0, 0), .Zero, 0, .Shadow);
+				Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec, .Zero, 0, .White);
 			}
 		}
 
@@ -1258,6 +1257,15 @@ class Game
 			Raylib.DrawLineEx(bottomLeft, topRight, 1, .(255, 100, 0, 255));
 		}
 
+		void drawMineTile(int x, int y)
+		{
+			let drawPos = getTileDrawPosCenter(x, y);
+
+			Raylib.DrawRectangleRec(.(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING), TILE_SIZE, TILE_SIZE), .(210, 45, 31, 255));
+			// Raylib.DrawCircleV(drawPos, (TILE_SIZE * 0.5f) - 4, Color.Black);
+			Raylib.DrawTextureRec(Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), .(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING)) - .(0, 0), .White);
+		}
+
 		// Loop through all tiles
 		for (let x < m_Board.Width)
 		{
@@ -1276,20 +1284,23 @@ class Game
 				}
 				else if (m_State.Tiles[x, y] == .NoMine)
 				{
+					drawClosedTile(x, y);
 					drawCrossedOutTile(x, y);
 				}
 				else if (m_State.Tiles[x, y] == .Opened)
 				{
 					if (m_State.Mines[x, y])
 					{
-						Raylib.DrawRectangleRec(.(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING), TILE_SIZE, TILE_SIZE), .(210, 45, 31, 255));
-						Raylib.DrawCircleV(drawPos, (TILE_SIZE * 0.5f) - 4, Color.Black);
+						drawMineTile(x, y);
 					}
 					else if (m_State.Numbers[x, y] > 0) // Draw number tile if greater than 0
 					{
 						drawNumberTile(drawPos, x, y);
 					}
 				}
+
+				// if (m_State.Mines[x, y])
+				// drawMineTile(x, y);
 			}
 		}
 
