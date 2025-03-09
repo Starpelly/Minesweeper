@@ -1,0 +1,26 @@
+FileVersion = 1
+Projects = {MinesweeperLibrary = {Path = "."}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, MinesweeperGUI = {Path = "MinesweeperGUI"}, MinesweeperConsole = {Path = "MinesweeperConsole"}}
+
+[Workspace]
+StartupProject = "MinesweeperGUI"
+
+[Configs.Debug.Win64]
+ConfigSelections = {raylib-beef = {Config = "StaticDebug"}}
+
+[Configs.Debug.wasm32]
+AllocType = "CRT"
+EnableObjectDebugFlags = false
+EmitObjectAccessCheck = false
+
+[Configs.Release.Win64]
+ConfigSelections = {raylib-beef = {Config = "StaticRelease"}}
+
+[Configs.Paranoid.wasm32]
+AllocType = "CRT"
+EnableObjectDebugFlags = false
+EmitObjectAccessCheck = false
+
+[Configs.Test.wasm32]
+AllocType = "CRT"
+EnableObjectDebugFlags = false
+EmitObjectAccessCheck = false

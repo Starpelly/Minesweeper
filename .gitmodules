@@ -1,0 +1,3 @@
+[submodule "vendor/raylib-beef"]
+	path = vendor/raylib-beef
+	url = https://github.com/starpelly/raylib-beef

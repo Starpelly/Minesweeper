@@ -1,0 +1,6 @@
+FileVersion = 1
+Dependencies = {corlib = "*", MinesweeperLibrary = "*"}
+
+[Project]
+Name = "MinesweeperConsole"
+StartupObject = "MinesweeperConsole.Program"

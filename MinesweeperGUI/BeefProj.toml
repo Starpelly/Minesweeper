@@ -1,0 +1,7 @@
+FileVersion = 1
+Dependencies = {corlib = "*", MinesweeperLibrary = "*"}
+
+[Project]
+Name = "MinesweeperGUI"
+TargetType = "BeefGUIApplication"
+StartupObject = "MinesweeperGUI.Program"
