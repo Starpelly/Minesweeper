@@ -136,6 +136,13 @@ class Game
 
 	private List<ShakeInstance> m_CamShakesList = new .() ~ DeleteContainerAndItems!(_);
 
+	private class Highscore
+	{
+		public float Points = 0.0f;
+		public Stopwatch BestTimeTimer = new .() ~ delete _;
+		public int Combo = 0;
+	}
+
 	// ----------------
 	// Static variables
 	// ----------------
@@ -164,7 +171,7 @@ class Game
 
 	private float m_ProgressBarTimer = 0.0f;
 
-	private float m_SessionHighscore = 0.0f;
+	private Highscore m_SessionHighscore = new .() ~ delete _;
 
 	// --------------
 	// Public methods
@@ -208,12 +215,19 @@ class Game
 			Mines = Math.Clamp(startMineCount, startMineCount, 13)
 		};
 
-		Remake(newBoard);
+		m_Camera.zoom = 2;
+		Remake(newBoard, false);
 	}
 
-	public void Remake(Board board)
+	public void Remake(Board board, bool loseState)
 	{
 		m_Board = board;
+
+		if (loseState)
+		{
+			// Add two mines every fail as a punishment
+			m_Board.Mines += 2;
+		}
 
 		m_State.State = .Game;
 
@@ -366,17 +380,6 @@ class Game
 				{
 					if (k >= 0 && l >= 0 && k < m_Board.Width && l < m_Board.Height)
 					{
-						/*
-						if (state == 0 && actField[k, l] != 1)
-						{
-							if (actField[k][l] == 2)
-							{
-								flags--;
-							}
-							actField[k][l] == 0;
-						}
-						*/
-
 						if (m_State.Tiles[k, l] == .Closed)
 						{
 							Raylib.PlaySound(Assets.Sounds.ClearArea.Sound);
@@ -656,9 +659,6 @@ class Game
 		let pointsToGive = m_State.Numbers[x, y];
 		m_State.Points += pointsToGive * m_State.ComboMult;
 
-		if (m_State.Points > m_SessionHighscore)
-			m_SessionHighscore = m_State.Points;
-
 		CreateParticle(new NewPointsParticle(.((x * (TILE_SIZE + TILE_SPACING)) + (4), y * (TILE_SIZE + TILE_SPACING)), NUMBER_COLORS[pointsToGive], scope $"+{pointsToGive}"));
 
 		m_State.ComboIncrementor++;
@@ -673,6 +673,15 @@ class Game
 		}
 		m_State.DecrementingCombo = false;
 		m_State.MaxComboTimerTime += 0.25f;
+
+		if (m_State.Points > m_SessionHighscore.Points)
+		{
+			m_SessionHighscore.Points = m_State.Points;
+		}
+		if (m_State.ComboMult > m_SessionHighscore.Combo)
+		{
+			m_SessionHighscore.Combo = m_State.ComboMult;
+		}
 
 		RestartComboTimer();
 	}
@@ -699,11 +708,11 @@ class Game
 		m_State.ComboTimer.Reset();
 		m_State.NextBoardTimer.Reset();
 		m_State.StageTimer.Reset();
+		m_SessionHighscore.BestTimeTimer.Reset();
 		m_State.Stage = 0;
 
 		MakeStage(m_State.Stage);
 		centerCamera();
-		m_Camera.zoom = 2;
 	}
 
 	// ------
@@ -805,6 +814,11 @@ class Game
 				m_State.ComboMult = Math.Max(0, m_State.ComboMult);
 			}
 
+			if (m_State.Points >= m_SessionHighscore.Points)
+			{
+				m_SessionHighscore.BestTimeTimer.CopyFrom(m_State.SessionTimer);
+			}
+
 			if (m_State.ComboTimer.Elapsed.TotalSeconds >= m_State.MaxComboTimerTime)
 			{
 				if (m_State.DecrementingCombo)
@@ -851,7 +865,7 @@ class Game
 
 				m_State.NextBoardTimer.Reset();
 
-				Remake(m_Board);
+				Remake(m_Board, true);
 			}
 		}
 		else if (m_State.State == .GameOver)
@@ -883,48 +897,37 @@ class Game
 
 		Raylib.EndMode2D();
 
-		// Combo Timer
+		void timeFormatted(String outStr, Stopwatch stopwatch)
 		{
-			// let timeFormatted = scope $"{(int)m_State.ComboTimer.Elapsed.TotalHours:D3}:{m_State.ComboTimer.Elapsed.Minutes:D2}:{m_State.ComboTimer.Elapsed.Seconds:D2}'{m_State.ComboTimer.Elapsed.Milliseconds:D3}";
-			let timeTxt = scope $"{m_State.Points} points";
-
-			let fontSize = 20;
-			let textPadding = 2;
-
-			let timerX = 0;
-			let timerY = 10;
-
-			// let timerMeasureTxt = Raylib.MeasureText(timeTxt, fontSize);
-
-			Raylib.DrawRectangleRec(.(timerX, timerY, 192 + 4, fontSize + textPadding), Color.Black);
-			Raylib.DrawText(timeTxt, timerX + 4, timerY + 1 + (textPadding / 2), fontSize, Color.White);
+			outStr.Append(scope $"{(int)stopwatch.Elapsed.TotalHours:D2}:{stopwatch.Elapsed.Minutes:D2}:{stopwatch.Elapsed.Seconds:D2}'{stopwatch.Elapsed.Milliseconds:D3}");
 		}
-		// Total Timer
+
+		// Top left
 		{
-			let timeFormatted = scope $"{(int)m_State.SessionTimer.Elapsed.TotalHours:D2}:{m_State.SessionTimer.Elapsed.Minutes:D2}:{m_State.SessionTimer.Elapsed.Seconds:D2}'{m_State.SessionTimer.Elapsed.Milliseconds:D3}";
-			let timeTxt = scope $"Time: {timeFormatted}";
+			void drawSideThing(String text, int32 timerWidth, int32 timerY, int32 fontSize, int32 cornerWidth, Color bgColor)
+			{
+				let textPadding = 2;
 
-			let fontSize = 10;
-			let textPadding = 2;
+				let timerHeight = fontSize + textPadding;
 
-			let timerX = 0;
-			let timerY = 32;
+				let timerX = 0;
 
-			Raylib.DrawRectangleRec(.(timerX, timerY, 88 + 8, fontSize + textPadding), .(25, 25, 25, 255));
-			Raylib.DrawText(timeTxt, timerX + 4, timerY + (textPadding / 2), fontSize, Color.White);
-		}
-		// Highscore
-		{
-			let timeTxt = scope $"Highscore: {m_SessionHighscore}";
+				Raylib.DrawRectangleRec(.(timerX, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
 
-			let fontSize = 10;
-			let textPadding = 2;
+				let triangleX = (timerX + timerWidth) - cornerWidth;
+				Raylib.DrawTriangle(.(triangleX, timerY), .(triangleX, timerY + timerHeight), .(triangleX + cornerWidth, timerY), bgColor);
 
-			let timerX = 0;
-			let timerY = 32 + 12;
+				Raylib.DrawText(text, timerX + 4, timerY + (textPadding / 2), fontSize, Color.White);
+			}
 
-			Raylib.DrawRectangleRec(.(timerX, timerY, 100 + 4, fontSize + textPadding), .(45, 45, 45, 255));
-			Raylib.DrawText(timeTxt, timerX + 4, timerY + (textPadding / 2), fontSize, Color.White);
+			// Points
+			{
+				drawSideThing(scope $"{m_State.Points} points", 196, 10, 20, 22, .Black);
+			}
+			// Total Timer
+			{
+				drawSideThing(scope $"Time: {timeFormatted(.. scope .(), m_State.SessionTimer)}", 174, 32, 10, 12, .(25, 25, 25, 255));
+			}
 		}
 
 		// Counters
@@ -940,19 +943,15 @@ class Game
 				Raylib.DrawText(text, textOffsetX, posY + 8, 20, .White);
 			}
 
-			drawCounter(m_State.MineCount.ToString(.. scope .()), Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), 48 + 12);
-			drawCounter(((int)(m_State.MineCount - m_State.FlagCount)).ToString(.. scope .()), Assets.Textures.Flags.Texture, .(0, 0, 16, 16), 82 + 12);
+			drawCounter(m_State.MineCount.ToString(.. scope .()), Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), 48);
+			drawCounter(((int)(m_State.MineCount - m_State.FlagCount)).ToString(.. scope .()), Assets.Textures.Flags.Texture, .(0, 0, 16, 16), 82);
 		}
 
 		// Combos UI
 		{
 			// Progress bar
 			{
-				let barX = 0;
 				let barY = 10;
-
-				let fontSize = 20;
-				let textPadding = 2;
 
 				float width = 200;
 
@@ -960,22 +959,26 @@ class Game
 				let barYPos = barY;
 
 				let barWidth = width;
-				let barHeight = fontSize + textPadding;
+				let barHeight = 44 / 2;
 
-				m_ProgressBarTimer = Math.Lerp(m_ProgressBarTimer, (float)m_State.ComboTimer.Elapsed.TotalSeconds, Raylib.GetFrameTime() * 20.0f);
+				let cornerWidth = 0;
+
+				m_ProgressBarTimer = Math.Lerp(m_ProgressBarTimer, (float)m_State.ComboTimer.Elapsed.TotalSeconds, Raylib.GetFrameTime() * 15.0f);
 
 				let barInnerPadding = 2;
 				let barInnerWidth = (int)Math.Lerp(0, width - barInnerPadding, (m_ProgressBarTimer / m_State.MaxComboTimerTime));
 
-				Raylib.DrawRectangleRec(.(barXPos, barYPos, barWidth, barHeight), .Black);
+				let triangleX = barXPos;
+				Raylib.DrawRectangleRec(.(barXPos + cornerWidth, barYPos, barWidth - cornerWidth, barHeight), .Black);
+				Raylib.DrawTriangle(.(triangleX, barYPos), .(triangleX + cornerWidth, barYPos + barHeight), .(triangleX + cornerWidth, barYPos), .Black);
 
 				// Inner
 				// let innerRec = Rectangle((barXPos + barInnerPadding) + barInnerWidth, barYPos + barInnerPadding, width - (barInnerPadding * 2) - barInnerWidth, barHeight - (barInnerPadding * 2));
-				let innerRec = Rectangle(barXPos + barInnerPadding, barYPos + barInnerPadding, width - (barInnerPadding * 2), barHeight - (barInnerPadding * 2));
+				let innerRec = Rectangle(barXPos + cornerWidth + barInnerPadding, barYPos + barInnerPadding, width - (barInnerPadding * 2) - cornerWidth, barHeight - (barInnerPadding * 2));
 				let innerColor = m_State.DecrementingCombo ? Color(125, 125, 125, 255) : Color.White;
 				Raylib.DrawRectangleGradientEx(innerRec, innerColor, innerColor, innerColor, innerColor);
 
-				Raylib.DrawRectangleRec(.(barXPos + barInnerPadding, barYPos + barInnerPadding, barInnerWidth, barHeight - (barInnerPadding * 2)), .Black);
+				Raylib.DrawRectangleRec(.(barXPos + barInnerPadding + cornerWidth, barYPos + barInnerPadding, barInnerWidth - cornerWidth, barHeight - (barInnerPadding * 2)), .Black);
 			}
 
 			// Combo Mult
@@ -990,6 +993,41 @@ class Game
 				Raylib.DrawText(str, multXPos, multYPos, 20, .White);
 			}
 		}
+
+		// Bottom right
+		{
+			void drawSideThing(String text, int32 timerWidth, int32 timerY, Color bgColor)
+			{
+				let fontSize = 10;
+				let textPadding = 2;
+
+				let timerHeight = fontSize + textPadding;
+
+				let cornerWidth = 12;
+
+				let timerX = (int32)SCREEN_WIDTH - timerWidth;
+
+				Raylib.DrawRectangleRec(.(timerX + cornerWidth, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
+				Raylib.DrawTriangle(.(timerX, timerY), .(timerX + cornerWidth, timerY + timerHeight), .(timerX + cornerWidth, timerY), bgColor);
+
+				Raylib.DrawText(text, timerX + 4 + cornerWidth, timerY + (textPadding / 2), fontSize, Color.White);
+			}
+
+			let baseY = SCREEN_HEIGHT + 12;
+			// Highscore
+			{
+				drawSideThing(scope $"Highscore: {m_SessionHighscore.Points} points", 152, baseY - 56, .Black);
+			}
+			// Best time
+			{
+				drawSideThing(scope $"Best time: {timeFormatted(.. scope .(), m_SessionHighscore.BestTimeTimer)}", 140, baseY - 44, .(25, 25, 25, 255));
+			}
+			// Best combo
+			{
+				drawSideThing(scope $"Best combo: {m_SessionHighscore.Combo}", 128, baseY - 32, .(35, 35, 35, 255));
+			}
+		}
+
 
 		// Lives
 		{

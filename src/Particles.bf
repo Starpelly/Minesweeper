@@ -64,7 +64,7 @@ class OpenedTileParticle : Particle
 
 		m_Opacity -= 1.3f * Raylib.GetFrameTime();
 
-		if (Position.y >= 200 || Scale < 0.0f || m_Opacity <= 0.0f)
+		if (Scale < 0.0f || m_Opacity <= 0.0f)
 			DestroySelf();
 	}
 
