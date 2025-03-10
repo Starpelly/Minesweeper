@@ -11,10 +11,14 @@ class Game
 	// Constants / Structs
 	// -------------------
 
+	private const int32 UI_SCALE = 2;
+	private const int32 UI_SCREEN_WIDTH = BASE_SCREEN_WIDTH / UI_SCALE;
+	private const int32 UI_SCREEN_HEIGHT = BASE_SCREEN_HEIGHT / UI_SCALE;
+
 	private const uint32 TILE_SIZE = 16;
 	private const uint32 TILE_SPACING = 1;
 	private const uint32 LINE_WIDTH = 1;
-	private const int BG_CHECKER_SIZE = 16;
+	private const int BG_CHECKER_SIZE = 32;
 
 	private const uint MAX_LIVES = 3;
 	private const float SECONDS_PER_COMBO = 4.0f;
@@ -24,6 +28,18 @@ class Game
 	private const float TIME_BETWEEN_BOARDS_WIN = 0.5f;
 	private const float TIME_BETWEEN_BOARDS_FAIL = 2.45f;
 	private const float TIME_BETWEEN_BOARDS_GAMEOVER = 0.75f;
+
+	private const double POINTS_PER_BOARD_COLUMN = 8000; // 8k
+	private const double POINTS_PER_BOARD_ROW = 50000; // 50k
+
+	private const uint DEFAULT_BOARD_WIDTH = 8;
+	private const uint DEFAULT_BOARD_HEIGHT = 8;
+	private const uint DEFAULT_BOARD_MINES = 6;
+
+	private const uint DEFAULT_TILE_TYPE = 0;
+
+	private const float SECONDS_PER_MINE_MAX = 60.0f;
+	private const float SECONDS_PER_MINE_MIN = 15.0f;
 
 	private const Color[10] NUMBER_COLORS = .(
 		.(0, 0, 0, 255),
@@ -62,15 +78,55 @@ class Game
 		GameOver
 	}
 
+	private class ComboTimer
+	{
+		public float ElapsedSeconds = 0.0f;
+
+		private bool m_IsRunning = false;
+
+		public void Start()
+		{
+			m_IsRunning = true;
+		}
+
+		public void Stop()
+		{
+			m_IsRunning = false;
+		}
+
+		public void Restart()
+		{
+			m_IsRunning = true;
+			ElapsedSeconds = 0.0f;
+		}
+
+		public void Reset()
+		{
+			m_IsRunning = false;
+			ElapsedSeconds = 0.0f;
+		}
+
+		public void Update()
+		{
+			if (m_IsRunning)
+			{
+				ElapsedSeconds += Raylib.GetFrameTime();
+			}
+		}
+	}
+
 	private class State
 	{
 		public bool IsPlaying = false;
 
 		public Stopwatch SessionTimer = new .() ~ delete _;
-		public Stopwatch StageTimer = new .() ~ delete _;
+		public Stopwatch MineTimer = new .() ~ delete _;
+		public Stopwatch NextBoardTimer = new .() ~ delete _;
+
+		public float SecondsToNewMine = 0.0f;
 
 		public float Points = 0;
-		public Stopwatch ComboTimer = new .() ~ delete _;
+		public ComboTimer ComboTimer = new .() ~ delete _;
 		public int ComboMult = 1;
 		public uint ComboIncrementor = 0; // Every 8 clears, our multipler increases
 		public bool DecrementingCombo = false;
@@ -85,7 +141,13 @@ class Game
 
 		public uint Stage = 0;
 
-		public Stopwatch NextBoardTimer = new .() ~ delete _;
+		public uint NextColumnCount = 0;
+		public uint NextRowCount = 0;
+
+		public float NextPointsForWidthAdd = 0.0f;
+		public float NextPointsForHeightAdd = 0.0f;
+
+		public uint TileType = 0;
 
 		public bool WaitingForFirstClick = false;
 
@@ -135,6 +197,7 @@ class Game
 	}
 
 	private List<ShakeInstance> m_CamShakesList = new .() ~ DeleteContainerAndItems!(_);
+	private Vector2 m_CamShakeInfluence = .Zero;
 
 	private class Highscore
 	{
@@ -157,13 +220,18 @@ class Game
 	private State m_State = new .() ~ delete _;
 
 	private Camera2D m_Camera;
+	private float m_TargetCameraZoom = 0.0f;
 
 	private float m_NewCameraZoom;
 	private Vector2 m_NewCameraTarget;
 
 	private Vector2 GetMousePosition()
 	{
+#if GAME_SCREEN_FREE
+		return Raylib.GetMousePosition();
+#else
 		return EntryPoint.MousePositionViewport;
+#endif
 	}
 
 	private List<Particle> m_ActiveParticles = new .() ~ DeleteContainerAndItems!(_);
@@ -173,6 +241,8 @@ class Game
 
 	private Highscore m_SessionHighscore = new .() ~ delete _;
 
+	private RenderTexture2D m_UIRenderTexture;
+
 	// --------------
 	// Public methods
 	// --------------
@@ -180,12 +250,20 @@ class Game
 	public this()
 	{
 		m_Board = .();
-		m_Camera = Camera2D(.Zero, .Zero, 0, 2);
+		m_Camera = Camera2D(.Zero, .Zero, 0, 4);
 
+		m_TargetCameraZoom = m_Camera.zoom;
 		m_NewCameraZoom = m_Camera.zoom;
 		m_NewCameraTarget = m_Camera.target;
 
+		m_UIRenderTexture = Raylib.LoadRenderTexture(UI_SCREEN_WIDTH, UI_SCREEN_HEIGHT);
+
 		RestartGame();
+	}
+
+	public ~this()
+	{
+		Raylib.UnloadRenderTexture(m_UIRenderTexture);
 	}
 
 	public void ShakeCamera(float strength, float speed, float decay)
@@ -206,16 +284,14 @@ class Game
 
 	public void MakeStage(uint stage)
 	{
-		uint startMineCount = 6 + m_State.StartMineAdd;
+		uint startMineCount = DEFAULT_BOARD_MINES + m_State.StartMineAdd;
 
 		let newBoard = Board()
 		{
-			Width = 8,
-			Height = 8,
-			Mines = Math.Clamp(startMineCount, startMineCount, 13)
+			Width = (int)Math.Clamp(m_State.NextColumnCount, DEFAULT_BOARD_WIDTH, 30),
+			Height = (int)Math.Clamp(m_State.NextRowCount, DEFAULT_BOARD_HEIGHT, 16),
+			Mines = Math.Clamp(startMineCount, startMineCount, 99)
 		};
-
-		m_Camera.zoom = 2;
 		Remake(newBoard, false);
 	}
 
@@ -304,7 +380,7 @@ class Game
 		Console.WriteLine(totalNumbers);
 	}
 
-	public void Open(int x, int y)
+	public void Open(int x, int y, bool wasWaitingForFirstClick = false)
 	{
 		if (m_State.State != .Game) return;
 		if (x < 0 || y < 0 || x >= m_Board.Width || y >= m_Board.Height)
@@ -312,6 +388,9 @@ class Game
 			return;
 		}
 
+		bool wasWaitingFC = m_State.WaitingForFirstClick;
+		if (wasWaitingForFirstClick)
+			wasWaitingFC = true;
 		if (m_State.WaitingForFirstClick)
 		{
 			GenerateMines(x, y);
@@ -321,7 +400,7 @@ class Game
 
 			m_State.SessionTimer.Start();
 			m_State.ComboTimer.Start();
-			m_State.StageTimer.Start();
+			m_State.MineTimer.Start();
 		}
 
 		if (m_State.Tiles[x, y] == .Closed)
@@ -329,8 +408,8 @@ class Game
 			m_State.Tiles[x, y] = .Opened;
 
 			let tileType = (x + y) % 2;
-			CreateParticle(new OpenedTileParticle(.(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING)), tileType));
-			ShakeCamera(1.1f, 4, 2);
+			CreateParticle(new OpenedTileParticle(.(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING)), m_State.TileType, tileType));
+			ShakeCamera(1f, 4, 2);
 
 			Raylib.PlaySound(Assets.Sounds.Click.Sound);
 		}
@@ -344,12 +423,17 @@ class Game
 
 			m_State.SessionTimer.Stop();
 			m_State.ComboTimer.Stop();
-			m_State.StageTimer.Stop();
+			m_State.MineTimer.Stop();
 
 			m_State.NextBoardTimer.Start();
 
 			m_State.Lives--;
 			m_State.State = (m_State.Lives <= 0) ? .GameOver : .Lose;
+
+			if (m_State.State == .GameOver)
+			{
+				// Raylib.PlaySound(Assets.Sounds.GameOver.Sound);
+			}
 
 			for (let bx < m_Board.Width)
 			{
@@ -383,11 +467,17 @@ class Game
 						if (m_State.Tiles[k, l] == .Closed)
 						{
 							Raylib.PlaySound(Assets.Sounds.ClearArea.Sound);
-							Open(k, l);
+							Open(k, l, wasWaitingFC);
 						}
 					}
 				}
 			}
+		}
+
+		if (!wasWaitingForFirstClick)
+		{
+			m_State.ComboTimer.ElapsedSeconds -= 0.25f;
+			m_State.ComboTimer.ElapsedSeconds = Math.Max(m_State.ComboTimer.ElapsedSeconds, 0.0f);
 		}
 
 		checkTileForPoints(x, y);
@@ -408,7 +498,7 @@ class Game
 		m_State.State = .Win;
 		m_State.SessionTimer.Stop();
 		m_State.ComboTimer.Stop();
-		m_State.StageTimer.Stop();
+		m_State.MineTimer.Stop();
 
 		Raylib.PlaySound(Assets.Sounds.Win.Sound);
 
@@ -421,7 +511,7 @@ class Game
 				{
 					if (!m_State.Cleared[bx, by])
 					if (m_State.Numbers[bx, by] > 0 && !m_State.Mines[bx, by])
-					ClearTile(bx, by);
+					SolveTile(bx, by);
 				}
 			}
 		}
@@ -582,7 +672,6 @@ class Game
 			else
 			{
 				Raylib.PlaySound(Assets.Sounds.Tap.Sound);
-
 			}
 		}
 	}
@@ -645,21 +734,30 @@ class Game
 					if (m_State.Numbers[k, l] > 0 && !m_State.Mines[k, l])
 					if (checkSurrounding(k, l))
 					{
-						ClearTile(k, l);
+						SolveTile(k, l);
 					}
 				}
 			}
 		}
 	}
 
-	private void ClearTile(int x, int y)
+	private void SolveTile(int x, int y)
 	{
 		m_State.Cleared[x, y] = true;
 
 		let pointsToGive = m_State.Numbers[x, y];
-		m_State.Points += pointsToGive * m_State.ComboMult;
+
+		AddPoints(pointsToGive * m_State.ComboMult);
+		// m_State.MaxComboTimerTime += 0.25f;
 
 		CreateParticle(new NewPointsParticle(.((x * (TILE_SIZE + TILE_SPACING)) + (4), y * (TILE_SIZE + TILE_SPACING)), NUMBER_COLORS[pointsToGive], scope $"+{pointsToGive}"));
+
+		RestartComboTimer();
+	}
+
+	private void AddPoints(float points)
+	{
+		m_State.Points += points;
 
 		m_State.ComboIncrementor++;
 		if (m_State.ComboIncrementor >= CLEARS_PER_COMBO)
@@ -672,7 +770,6 @@ class Game
 			m_State.MaxComboTimerTime = SECONDS_PER_COMBO;
 		}
 		m_State.DecrementingCombo = false;
-		m_State.MaxComboTimerTime += 0.25f;
 
 		if (m_State.Points > m_SessionHighscore.Points)
 		{
@@ -683,7 +780,22 @@ class Game
 			m_SessionHighscore.Combo = m_State.ComboMult;
 		}
 
-		RestartComboTimer();
+		if (m_State.Points >= m_State.NextPointsForWidthAdd)
+		{
+			m_State.NextColumnCount++;
+			m_State.NextPointsForWidthAdd += (float)POINTS_PER_BOARD_COLUMN;
+
+			m_State.SecondsToNewMine *= 0.75f;
+			m_State.SecondsToNewMine = Math.Clamp(m_State.SecondsToNewMine, SECONDS_PER_MINE_MIN, SECONDS_PER_MINE_MAX);
+		}
+		if (m_State.Points >= m_State.NextPointsForHeightAdd)
+		{
+			m_State.NextRowCount++;
+			m_State.NextPointsForHeightAdd += (float)POINTS_PER_BOARD_ROW;
+
+			m_State.SecondsToNewMine *= 0.75f;
+			m_State.SecondsToNewMine = Math.Clamp(m_State.SecondsToNewMine, SECONDS_PER_MINE_MIN, SECONDS_PER_MINE_MAX);
+		}
 	}
 
 	private void RestartComboTimer()
@@ -696,6 +808,8 @@ class Game
 
 	public void RestartGame()
 	{
+		m_State.SecondsToNewMine = SECONDS_PER_MINE_MAX;
+
 		m_State.Points = 0;
 		m_State.ComboMult = 1;
 		m_State.ComboIncrementor = 0;
@@ -707,9 +821,16 @@ class Game
 		m_State.SessionTimer.Reset();
 		m_State.ComboTimer.Reset();
 		m_State.NextBoardTimer.Reset();
-		m_State.StageTimer.Reset();
-		m_SessionHighscore.BestTimeTimer.Reset();
+		m_State.MineTimer.Reset();
+		m_SessionHighscore.BestTimeTimer.Stop();
 		m_State.Stage = 0;
+
+		m_State.NextColumnCount = DEFAULT_BOARD_WIDTH;
+		m_State.NextRowCount = DEFAULT_BOARD_HEIGHT;
+		m_State.NextPointsForWidthAdd = (float)POINTS_PER_BOARD_COLUMN;
+		m_State.NextPointsForHeightAdd = (float)POINTS_PER_BOARD_ROW;
+
+		m_State.TileType = DEFAULT_TILE_TYPE;
 
 		MakeStage(m_State.Stage);
 		centerCamera();
@@ -721,9 +842,209 @@ class Game
 
 	public void Update()
 	{
+#if DEBUG
+		// Debug: Restart game
 		if (Raylib.IsKeyPressed(.KEY_R))
 		{
 			RestartGame();
+		}
+
+		// Debug: Add 1k points
+		if (Raylib.IsKeyPressed(.KEY_P))
+		{
+			AddPoints(1000);
+		}
+
+		// Debug: Clear current board
+		if (Raylib.IsKeyPressed(.KEY_C))
+		{
+			for (let x < m_Board.Width)
+			{
+				for (let y < m_Board.Height)
+				{
+					if (!m_State.Mines[x, y])
+					{
+						Open(x, y);
+					}
+				}
+			}
+		}
+
+		// Debug: Increase board height
+		if (Raylib.IsKeyPressed(.KEY_UP))
+		{
+			let b = Board()
+			{
+				Width = m_Board.Width,
+				Height = m_Board.Height + 1,
+				Mines = m_Board.Mines
+			};
+			Remake(b, false);
+		}
+		// Debug: Decrease board height
+		if (Raylib.IsKeyPressed(.KEY_DOWN))
+		{
+			let b = Board()
+			{
+				Width = m_Board.Width,
+				Height = m_Board.Height - 1,
+				Mines = m_Board.Mines
+			};
+			Remake(b, false);
+		}
+
+		// Debug: Increase board width
+		if (Raylib.IsKeyPressed(.KEY_LEFT))
+		{
+			let b = Board()
+			{
+				Width = m_Board.Width - 1,
+				Height = m_Board.Height,
+				Mines = m_Board.Mines
+			};
+			Remake(b, false);
+		}
+		// Decrease board height
+		if (Raylib.IsKeyPressed(.KEY_RIGHT))
+		{
+			let b = Board()
+			{
+				Width = m_Board.Width + 1,
+				Height = m_Board.Height,
+				Mines = m_Board.Mines
+			};
+			Remake(b, false);
+		}
+#endif
+
+#if GAME_SCREEN_FREE
+		let baseZoom = 6.0f;
+		let baseBoardSize = BOARD_SIZE * baseZoom;
+
+		// Camera zoom
+		if (SCREEN_WIDTH < (baseBoardSize.x))
+		{
+			// m_Camera.zoom = baseZoom - ((baseBoardSize.x - SCREEN_WIDTH) / baseZoom);
+			let norm = Math.Normalize(SCREEN_WIDTH, 0, baseBoardSize.x);
+			let lerp = Math.Lerp(0, baseZoom, norm);
+			m_Camera.zoom = lerp;
+		}
+		else
+		{
+			m_Camera.zoom = baseZoom;
+		}
+		Console.WriteLine(EntryPoint.ViewportScale);
+		/*
+		if (m_Board.Height > 8 || m_State.NextColumnCount > 16)
+		{
+			m_Camera.zoom = 1f;
+		}
+		*/
+#elif false
+		let baseZoom = 4.0f;
+
+		/*
+		if (baseBoardSize.x >= 1088.0f)
+		{
+			{
+				let norm = Math.Normalize(SCREEN_WIDTH - 192, 0, baseBoardSize.x);
+				let lerp = Math.Lerp(0, 1, norm);
+				lerpVec.x = lerp;
+			}
+
+
+			if (baseBoardSize.y >= 884.0f)
+			{
+				let norm = Math.Normalize(SCREEN_HEIGHT - 182, 0, baseBoardSize.y);
+				let lerp = Math.Lerp(0, 1, norm);
+				lerpVec.x = lerp;
+			}
+			else
+			{
+
+			}
+
+			Console.WriteLine(baseBoardSize.y);
+		}
+		*/
+
+		var newZoomMult = 1.0f;
+		while (true)
+		{
+			let refBoardSize = BOARD_SIZE * newZoomMult;
+
+			/*
+			if (refBoardSize.x >= (272.0f / newZoomMult))
+			{
+				let norm = Math.Normalize(refBoardSize.x, 0, SCREEN_WIDTH - 192, true);
+				let lerp = Math.Lerp(1, 0, norm);
+				newZoomMult = lerp;
+
+				if (newZoomMult == 1.0f)
+					break;
+
+				continue;
+			}
+			*/
+
+			if (refBoardSize.y > (136.0f / newZoomMult))
+			{
+				Console.WriteLine(refBoardSize.y);
+				let norm = Math.Normalize(refBoardSize.y, 0, SCREEN_HEIGHT - 182, true);
+				let lerp = Math.Lerp(1, 0, norm);
+				newZoomMult = lerp;
+
+				if (newZoomMult == 1.0f)
+					break;
+
+				continue;
+			}
+
+			break;
+		}
+		m_Camera.zoom = newZoomMult * baseZoom;
+
+		/*
+		if (baseBoardSize.y >= 544.0f)
+		{
+			let norm = Math.Normalize(SCREEN_HEIGHT - 182, 0, baseBoardSize.y);
+			let lerp = Math.Lerp(0, 1, norm);
+			lerpVec.y = lerp;
+		}
+		*/
+
+		// m_Camera.zoom = (lerpVec.x / lerpVec.y) * baseZoom;
+
+#else
+		m_TargetCameraZoom = 4.0f;
+
+		if (m_Board.Width > 16 || m_Board.Height > 8)
+		{
+			m_TargetCameraZoom = 3f;
+		}
+		if (m_Board.Width > 21 || m_Board.Height > 10)
+		{
+			m_TargetCameraZoom = 2.5f;
+		}
+		if (m_Board.Width > 25 || m_Board.Height > 12)
+		{
+			m_TargetCameraZoom = 2f;
+		}
+		if (m_Board.Width > 31 || m_Board.Height > 15)
+		{
+			m_TargetCameraZoom = 1.75f;
+		}
+		if (m_Board.Width > 36 || m_Board.Height > 18)
+		{
+			m_TargetCameraZoom = 1f;
+		}
+
+		m_Camera.zoom = Math.Lerp(m_Camera.zoom, m_TargetCameraZoom, Raylib.GetFrameTime() * 18.0f);
+#endif
+
+		// Update timers
+		{
+			m_State.ComboTimer.Update();
 		}
 
 		for (let particle in ref m_ParticlesToDelete)
@@ -742,28 +1063,33 @@ class Game
 		// updateCameraControl();
 		centerCamera();
 
-		var shakesToRemove = scope List<ShakeInstance>();
-		for (let shake in ref m_CamShakesList)
+		// Update camera shake
 		{
-			if (shake.IsFinished)
-				shakesToRemove.Add(shake);
-		}
-		for (let rm in ref shakesToRemove)
-		{
-			delete rm;
-			m_CamShakesList.Remove(rm);
-		}
-		shakesToRemove.Clear();
+			m_CamShakeInfluence = .Zero;
 
-		for (let shake in ref m_CamShakesList)
-		{
-			shake.Time += Raylib.GetFrameTime() * shake.Speed;
-			float decayFactor = Math.Exp(-shake.Decay * shake.Time);
-			float shakeStrength = shake.Strength * decayFactor;
+			var shakesToRemove = scope List<ShakeInstance>();
+			for (let shake in ref m_CamShakesList)
+			{
+				if (shake.IsFinished)
+					shakesToRemove.Add(shake);
+			}
+			for (let rm in ref shakesToRemove)
+			{
+				delete rm;
+				m_CamShakesList.Remove(rm);
+			}
+			shakesToRemove.Clear();
 
-			m_Camera.target += .(Math.RandomFloat32(-shakeStrength, shakeStrength), Math.RandomFloat32(-shakeStrength, shakeStrength));
+			for (let shake in ref m_CamShakesList)
+			{
+				shake.Time += Raylib.GetFrameTime() * shake.Speed;
+				float decayFactor = Math.Exp(-shake.Decay * shake.Time);
+				float shakeStrength = shake.Strength * decayFactor;
+
+				m_CamShakeInfluence += .(Math.RandomFloat32(-shakeStrength, shakeStrength), Math.RandomFloat32(-shakeStrength, shakeStrength));
+				// m_Camera.target += .(Math.RandomFloat32(-shakeStrength, shakeStrength), Math.RandomFloat32(-shakeStrength, shakeStrength));
+			}
 		}
-
 #if false
 		if ((Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT) && Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_RIGHT))
 			|| (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_RIGHT) && Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT)))
@@ -787,11 +1113,12 @@ class Game
 
 		// Update min mines
 		{
-			if (m_State.StageTimer.Elapsed.TotalSeconds >= 60.0f)
+			if (m_State.MineTimer.Elapsed.TotalSeconds >= m_State.SecondsToNewMine)
 			{
 				m_State.StartMineAdd++;
-				m_State.StageTimer.Restart();
+				m_State.MineTimer.Restart();
 			}
+			Console.WriteLine(scope $"0: {m_State.MineTimer.Elapsed.TotalSeconds}, 1: {m_State.SecondsToNewMine}");
 		}
 
 		// Update combo timer
@@ -811,7 +1138,7 @@ class Game
 				m_State.ComboMult -= 1;
 				m_State.ComboIncrementor = 0;
 
-				m_State.ComboMult = Math.Max(0, m_State.ComboMult);
+				m_State.ComboMult = Math.Max(1, m_State.ComboMult);
 			}
 
 			if (m_State.Points >= m_SessionHighscore.Points)
@@ -819,7 +1146,7 @@ class Game
 				m_SessionHighscore.BestTimeTimer.CopyFrom(m_State.SessionTimer);
 			}
 
-			if (m_State.ComboTimer.Elapsed.TotalSeconds >= m_State.MaxComboTimerTime)
+			if (m_State.ComboTimer.ElapsedSeconds >= m_State.MaxComboTimerTime)
 			{
 				if (m_State.DecrementingCombo)
 				{
@@ -852,6 +1179,8 @@ class Game
 
 				m_State.NextBoardTimer.Reset();
 
+				// m_State.TileType = (uint)Random.Next(0, 7);
+
 				MakeStage(m_State.Stage);
 			}
 		}
@@ -864,6 +1193,8 @@ class Game
 				m_State.ComboTimer.Reset();
 
 				m_State.NextBoardTimer.Reset();
+
+				// m_State.TileType = (uint)Random.Next(0, 7);
 
 				Remake(m_Board, true);
 			}
@@ -881,199 +1212,75 @@ class Game
 		}
 	}
 
+	public void RenderUI()
+	{
+		Raylib.BeginTextureMode(m_UIRenderTexture);
+		Raylib.ClearBackground(.(0, 0, 0, 0));
+		renderUI();
+		Raylib.EndTextureMode();
+	}
+
 	public void Render()
 	{
-		renderBackground();
-
-		Raylib.BeginMode2D(m_Camera);
-
-		renderBoard();
-
-		for (let particle in m_ActiveParticles)
+		// Render game shit
 		{
-			if (particle.[Friend]m_PendingDeletion) continue;
-			particle.Render();
+			renderBackground();
+
+			let drawCamera = Camera2D(m_Camera.offset, m_Camera.target + m_CamShakeInfluence, m_Camera.rotation, m_Camera.zoom);
+			Raylib.BeginMode2D(drawCamera);
+			{
+				renderBoard();
+
+				for (let particle in m_ActiveParticles)
+				{
+					if (particle.[Friend]m_PendingDeletion) continue;
+					particle.Render();
+				}
+			}
+			Raylib.EndMode2D();
+
+			m_CamShakeInfluence = .Zero;
 		}
 
-		Raylib.EndMode2D();
-
-		void timeFormatted(String outStr, Stopwatch stopwatch)
-		{
-			outStr.Append(scope $"{(int)stopwatch.Elapsed.TotalHours:D2}:{stopwatch.Elapsed.Minutes:D2}:{stopwatch.Elapsed.Seconds:D2}'{stopwatch.Elapsed.Milliseconds:D3}");
-		}
-
-		// Top left
-		{
-			void drawSideThing(String text, int32 timerWidth, int32 timerY, int32 fontSize, int32 cornerWidth, Color bgColor)
-			{
-				let textPadding = 2;
-
-				let timerHeight = fontSize + textPadding;
-
-				let timerX = 0;
-
-				Raylib.DrawRectangleRec(.(timerX, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
-
-				let triangleX = (timerX + timerWidth) - cornerWidth;
-				Raylib.DrawTriangle(.(triangleX, timerY), .(triangleX, timerY + timerHeight), .(triangleX + cornerWidth, timerY), bgColor);
-
-				Raylib.DrawText(text, timerX + 4, timerY + (textPadding / 2), fontSize, Color.White);
-			}
-
-			// Points
-			{
-				drawSideThing(scope $"{m_State.Points} points", 196, 10, 20, 22, .Black);
-			}
-			// Total Timer
-			{
-				drawSideThing(scope $"Time: {timeFormatted(.. scope .(), m_State.SessionTimer)}", 174, 32, 10, 12, .(25, 25, 25, 255));
-			}
-		}
-
-		// Counters
-		{
-			void drawCounter(String text, Texture2D texture, Rectangle textureRegion, int32 posY)
-			{
-				// Raylib.DrawRectangleRec(.(0, posY, 120 + 4, 32), .(25, 25, 25, 150));
-				Raylib.DrawTexturePro(texture, textureRegion, .(0 - 2, posY + 2, 32, 32), .Zero, 0, .Shadow);
-				Raylib.DrawTexturePro(texture, textureRegion, .(0, posY, 32, 32), .Zero, 0, .White);
-
-				let textOffsetX = 32 + 4;
-				Raylib.DrawText(text, textOffsetX - 2, posY + 8 + 2, 20, .Shadow);
-				Raylib.DrawText(text, textOffsetX, posY + 8, 20, .White);
-			}
-
-			drawCounter(m_State.MineCount.ToString(.. scope .()), Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), 48);
-			drawCounter(((int)(m_State.MineCount - m_State.FlagCount)).ToString(.. scope .()), Assets.Textures.Flags.Texture, .(0, 0, 16, 16), 82);
-		}
-
-		// Combos UI
-		{
-			// Progress bar
-			{
-				let barY = 10;
-
-				float width = 200;
-
-				let barXPos = SCREEN_WIDTH - width;
-				let barYPos = barY;
-
-				let barWidth = width;
-				let barHeight = 44 / 2;
-
-				let cornerWidth = 0;
-
-				m_ProgressBarTimer = Math.Lerp(m_ProgressBarTimer, (float)m_State.ComboTimer.Elapsed.TotalSeconds, Raylib.GetFrameTime() * 15.0f);
-
-				let barInnerPadding = 2;
-				let barInnerWidth = (int)Math.Lerp(0, width - barInnerPadding, (m_ProgressBarTimer / m_State.MaxComboTimerTime));
-
-				let triangleX = barXPos;
-				Raylib.DrawRectangleRec(.(barXPos + cornerWidth, barYPos, barWidth - cornerWidth, barHeight), .Black);
-				Raylib.DrawTriangle(.(triangleX, barYPos), .(triangleX + cornerWidth, barYPos + barHeight), .(triangleX + cornerWidth, barYPos), .Black);
-
-				// Inner
-				// let innerRec = Rectangle((barXPos + barInnerPadding) + barInnerWidth, barYPos + barInnerPadding, width - (barInnerPadding * 2) - barInnerWidth, barHeight - (barInnerPadding * 2));
-				let innerRec = Rectangle(barXPos + cornerWidth + barInnerPadding, barYPos + barInnerPadding, width - (barInnerPadding * 2) - cornerWidth, barHeight - (barInnerPadding * 2));
-				let innerColor = m_State.DecrementingCombo ? Color(125, 125, 125, 255) : Color.White;
-				Raylib.DrawRectangleGradientEx(innerRec, innerColor, innerColor, innerColor, innerColor);
-
-				Raylib.DrawRectangleRec(.(barXPos + barInnerPadding + cornerWidth, barYPos + barInnerPadding, barInnerWidth - cornerWidth, barHeight - (barInnerPadding * 2)), .Black);
-			}
-
-			// Combo Mult
-			if (m_State.ComboMult > 1)
-			{
-				let str = scope $"Combo: x{m_State.ComboMult}";
-
-				let multXPos = (int32)SCREEN_WIDTH - Raylib.MeasureText(str, 20) - 4;
-				let multYPos = 36;
-
-				Raylib.DrawText(str, multXPos - 2, multYPos + 2, 20, .Shadow);
-				Raylib.DrawText(str, multXPos, multYPos, 20, .White);
-			}
-		}
-
-		// Bottom right
-		{
-			void drawSideThing(String text, int32 timerWidth, int32 timerY, Color bgColor)
-			{
-				let fontSize = 10;
-				let textPadding = 2;
-
-				let timerHeight = fontSize + textPadding;
-
-				let cornerWidth = 12;
-
-				let timerX = (int32)SCREEN_WIDTH - timerWidth;
-
-				Raylib.DrawRectangleRec(.(timerX + cornerWidth, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
-				Raylib.DrawTriangle(.(timerX, timerY), .(timerX + cornerWidth, timerY + timerHeight), .(timerX + cornerWidth, timerY), bgColor);
-
-				Raylib.DrawText(text, timerX + 4 + cornerWidth, timerY + (textPadding / 2), fontSize, Color.White);
-			}
-
-			let baseY = SCREEN_HEIGHT + 12;
-			// Highscore
-			{
-				drawSideThing(scope $"Highscore: {m_SessionHighscore.Points} points", 152, baseY - 56, .Black);
-			}
-			// Best time
-			{
-				drawSideThing(scope $"Best time: {timeFormatted(.. scope .(), m_SessionHighscore.BestTimeTimer)}", 140, baseY - 44, .(25, 25, 25, 255));
-			}
-			// Best combo
-			{
-				drawSideThing(scope $"Best combo: {m_SessionHighscore.Combo}", 128, baseY - 32, .(35, 35, 35, 255));
-			}
-		}
-
-
-		// Lives
-		{
-			for (let i < MAX_LIVES)
-			{
-				int invI = Math.Abs((int)(i - MAX_LIVES)) - 1;
-				bool noHeart = invI > (int)m_State.Lives - 1;
-
-				let heartSrcRec = Rectangle(noHeart ? 11 : 0, 0, 11, 10);
-				let heartDestRec = Rectangle(6 + ((21 + -1) * invI), SCREEN_HEIGHT - 28, 11 * 2, 10 * 2);
-
-				// Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec - .(2, -2, 0, 0), .Zero, 0, .Shadow);
-				Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec, .Zero, 0, .White);
-			}
-		}
+		// Draw UI texture
+		Raylib.BeginBlendMode(.BLEND_ALPHA_PREMULTIPLY);
+		Raylib.DrawTexturePro(
+			m_UIRenderTexture.texture,
+			.(0, 0, m_UIRenderTexture.texture.width, -m_UIRenderTexture.texture.height),
+			.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT),
+			.(0, 0),
+			0,
+			.White
+		);
+		Raylib.EndBlendMode();
 
 		if (m_State.State == .Win)
 		{
 			Raylib.DrawRectangleRec(.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), .(0, 0, 0, 200));
 
 			let youWinTxt = "You Win!!!";
-			let youWinSize = 30;
+			let youWinSize = 30 * UI_SCALE;
 			let txtMeasure = Raylib.MeasureText(youWinTxt, youWinSize);
 
-			Raylib.DrawText(youWinTxt, (SCREEN_WIDTH / 2) - (txtMeasure / 2), (SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
+			Raylib.DrawText(youWinTxt, (int32)(SCREEN_WIDTH / 2) - (txtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
 		}
 		else if (m_State.State == .GameOver)
 		{
 			Raylib.DrawRectangleRec(.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), .(255, 0, 0, 120));
 
 			let youWinTxt = "Game Over!!! :(";
-			let youWinSize = 30;
+			let youWinSize = 30 * UI_SCALE;
 			let txtMeasure = Raylib.MeasureText(youWinTxt, youWinSize);
 
 			if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER)
 			{
 				let str = "(Left Click to restart)";
-				let clTxtMeasure = Raylib.MeasureText(str, 10);
-				Raylib.DrawText(str, (SCREEN_WIDTH / 2) - (clTxtMeasure / 2), (SCREEN_HEIGHT / 2) + 20, 10, .White);
+				let clTxtMeasure = Raylib.MeasureText(str, 10 * UI_SCALE);
+				Raylib.DrawText(str, (int32)(SCREEN_WIDTH / 2) - (clTxtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) + 20, 10 * UI_SCALE, .White);
 			}
 
-			Raylib.DrawText(youWinTxt, (SCREEN_WIDTH / 2) - (txtMeasure / 2), (SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
+			Raylib.DrawText(youWinTxt, (int32)(SCREEN_WIDTH / 2) - (txtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
 		}
-
-		// Raylib.DrawCircleV(GetMousePosition(), 4, .Red);
-
 	}
 
 	// ---------------
@@ -1175,6 +1382,158 @@ class Game
 		}
 	}
 
+	private void renderUI()
+	{
+		void timeFormatted(String outStr, Stopwatch stopwatch)
+		{
+			outStr.Append(scope $"{(int)stopwatch.Elapsed.TotalHours:D2}:{stopwatch.Elapsed.Minutes:D2}:{stopwatch.Elapsed.Seconds:D2}'{stopwatch.Elapsed.Milliseconds:D3}");
+		}
+
+		// Top left
+		{
+			void drawSideThing(String text, int32 timerWidth, int32 timerY, int32 fontSize, int32 cornerWidth, Color bgColor)
+			{
+				let textPadding = 2;
+
+				let timerHeight = fontSize + textPadding;
+
+				let timerX = 0;
+
+				Raylib.DrawRectangleRec(.(timerX, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
+
+				let triangleX = (timerX + timerWidth) - cornerWidth;
+				Raylib.DrawTriangle(.(triangleX, timerY), .(triangleX, timerY + timerHeight), .(triangleX + cornerWidth, timerY), bgColor);
+
+				Raylib.DrawText(text, timerX + 4, timerY + (textPadding / 2), fontSize, Color.White);
+			}
+
+			// Points
+			{
+				drawSideThing(scope $"{m_State.Points} points", 196, 10, 20, 22, .Black);
+			}
+			// Total Timer
+			{
+				drawSideThing(scope $"Time: {timeFormatted(.. scope .(), m_State.SessionTimer)}", 174, 32, 10, 12, .(25, 25, 25, 255));
+			}
+		}
+
+		// Counters
+		{
+			void drawCounter(String text, Texture2D texture, Rectangle textureRegion, int32 posY)
+			{
+				// Raylib.DrawRectangleRec(.(0, posY, 120 + 4, 32), .(25, 25, 25, 150));
+				Raylib.DrawTexturePro(texture, textureRegion, .(0 - 2, posY + 2, 32, 32), .Zero, 0, .Shadow);
+				Raylib.DrawTexturePro(texture, textureRegion, .(0, posY, 32, 32), .Zero, 0, .White);
+
+				let textOffsetX = 32 + 4;
+				Raylib.DrawText(text, textOffsetX - 2, posY + 8 + 2, 20, .Shadow);
+				Raylib.DrawText(text, textOffsetX, posY + 8, 20, .White);
+			}
+
+			drawCounter(m_State.MineCount.ToString(.. scope .()), Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), 48);
+			drawCounter(((int)(m_State.MineCount - m_State.FlagCount)).ToString(.. scope .()), Assets.Textures.Flags.Texture, .(0, 0, 16, 16), 82);
+		}
+
+		// Combos UI
+		{
+			// Progress bar
+			{
+				let barY = 10;
+
+				float width = 200;
+
+				let barXPos = UI_SCREEN_WIDTH - width;
+				let barYPos = barY;
+
+				let barWidth = width;
+				let barHeight = 44 / 2;
+
+				let cornerWidth = 0;
+
+				m_ProgressBarTimer = Math.Lerp(m_ProgressBarTimer, (float)m_State.ComboTimer.ElapsedSeconds, Raylib.GetFrameTime() * 15.0f);
+
+				let barInnerPadding = 2;
+				let barInnerWidth = (int)Math.Lerp(0, width - barInnerPadding, (m_ProgressBarTimer / m_State.MaxComboTimerTime));
+
+				let triangleX = barXPos;
+				Raylib.DrawRectangleRec(.(barXPos + cornerWidth, barYPos, barWidth - cornerWidth, barHeight), .Black);
+				Raylib.DrawTriangle(.(triangleX, barYPos), .(triangleX + cornerWidth, barYPos + barHeight), .(triangleX + cornerWidth, barYPos), .Black);
+
+				// Inner
+				// let innerRec = Rectangle((barXPos + barInnerPadding) + barInnerWidth, barYPos + barInnerPadding, width - (barInnerPadding * 2) - barInnerWidth, barHeight - (barInnerPadding * 2));
+				let innerRec = Rectangle(barXPos + cornerWidth + barInnerPadding, barYPos + barInnerPadding, width - (barInnerPadding * 2) - cornerWidth, barHeight - (barInnerPadding * 2));
+				let innerColor = m_State.DecrementingCombo ? Color(125, 125, 125, 255) : Color.White;
+				Raylib.DrawRectangleGradientEx(innerRec, innerColor, innerColor, innerColor, innerColor);
+
+				Raylib.DrawRectangleRec(.(barXPos + barInnerPadding + cornerWidth, barYPos + barInnerPadding, barInnerWidth - cornerWidth, barHeight - (barInnerPadding * 2)), .Black);
+			}
+
+			// Combo Mult
+			if (m_State.ComboMult > 1)
+			{
+				let str = scope $"Combo: x{m_State.ComboMult}";
+
+				let multXPos = (int32)UI_SCREEN_WIDTH - Raylib.MeasureText(str, 20) - 4;
+				let multYPos = 36;
+
+				Raylib.DrawText(str, multXPos - 2, multYPos + 2, 20, .Shadow);
+				Raylib.DrawText(str, multXPos, multYPos, 20, .White);
+			}
+		}
+
+		// Bottom right
+		{
+			void drawSideThing(String text, int32 timerWidth, int32 timerY, Color bgColor)
+			{
+				let fontSize = 10;
+				let textPadding = 2;
+
+				let timerHeight = fontSize + textPadding;
+
+				let cornerWidth = 12;
+
+				let timerX = (int32)UI_SCREEN_WIDTH - timerWidth;
+
+				Raylib.DrawRectangleRec(.(timerX + cornerWidth, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
+				Raylib.DrawTriangle(.(timerX, timerY), .(timerX + cornerWidth, timerY + timerHeight), .(timerX + cornerWidth, timerY), bgColor);
+
+				Raylib.DrawText(text, timerX + 4 + cornerWidth, timerY + (textPadding / 2), fontSize, Color.White);
+			}
+
+			let baseY = UI_SCREEN_HEIGHT + 12;
+			// Highscore
+			{
+				drawSideThing(scope $"Highscore: {m_SessionHighscore.Points} points", 152, (int32)baseY - 56, .Black);
+			}
+			// Best time
+			{
+				drawSideThing(scope $"Best time: {timeFormatted(.. scope .(), m_SessionHighscore.BestTimeTimer)}", 140, (int32)baseY - 44, .(25, 25, 25, 255));
+			}
+			// Best combo
+			{
+				drawSideThing(scope $"Best combo: {m_SessionHighscore.Combo}", 128, (int32)baseY - 32, .(35, 35, 35, 255));
+			}
+		}
+
+
+		// Lives
+		{
+			for (let i < MAX_LIVES)
+			{
+				int invI = Math.Abs((int)(i - MAX_LIVES)) - 1;
+				bool noHeart = invI > (int)m_State.Lives - 1;
+
+				let heartSrcRec = Rectangle(noHeart ? 11 : 0, 0, 11, 10);
+				let heartDestRec = Rectangle(6 + ((21 + -1) * invI), UI_SCREEN_HEIGHT - 28, 11 * 2, 10 * 2);
+
+				Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec - .(2, -2, 0, 0), .Zero, 0, .Shadow);
+				Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec, .Zero, 0, .White);
+			}
+		}
+
+		// Raylib.DrawCircleV(GetMousePosition(), 4, .Red);
+	}
+
 	private void renderBackground()
 	{
 		let bgWidth = SCREEN_WIDTH;
@@ -1268,15 +1627,15 @@ class Game
 
 		void drawClosedTile(int x, int y)
 		{
-			let row = 0;
+			let type = m_State.TileType;
 
 			if ((x + y) % 2 == 0)
 			{
-				Raylib.DrawTextureRec(Assets.Textures.Tiles.Texture, .(0, 18 * row, 18, 18), .(x * (17) - 1, y * 17 - 1), Color.White);
+				Raylib.DrawTextureRec(Assets.Textures.Tiles.Texture, .(0, 18 * type, 18, 18), .(x * (17) - 1, y * 17 - 1), Color.White);
 			}
 			else
 			{
-				Raylib.DrawTextureRec(Assets.Textures.Tiles.Texture, .(18, 18 * row, 18, 18), .(x * (17) - 1, y * 17 - 1), Color.White);
+				Raylib.DrawTextureRec(Assets.Textures.Tiles.Texture, .(18, 18 * type, 18, 18), .(x * (17) - 1, y * 17 - 1), Color.White);
 			}
 		}
 

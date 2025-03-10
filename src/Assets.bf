@@ -22,6 +22,7 @@ public static struct Data
 		public static uint8[?] Win = Compiler.ReadBinary("assets/sounds/win.wav");
 		public static uint8[?] ClearArea = Compiler.ReadBinary("assets/sounds/clear_area.wav");
 		public static uint8[?] FailedChord = Compiler.ReadBinary("assets/sounds/failed_chord.wav");
+		// public static uint8[?] GameOver = Compiler.ReadBinary("assets/sounds/gameover.wav");
 	}
 }
 
@@ -89,6 +90,7 @@ public class AssetManager
 		public readonly SoundFX Win = new .(&Data.Sounds.Win, Data.Sounds.Win.Count) ~ delete _;
 		public readonly SoundFX ClearArea = new .(&Data.Sounds.ClearArea, Data.Sounds.ClearArea.Count) ~ delete _;
 		public readonly SoundFX FailedChord = new .(&Data.Sounds.FailedChord, Data.Sounds.FailedChord.Count) ~ delete _;
+		// public readonly SoundFX GameOver = new .(&Data.Sounds.GameOver, Data.Sounds.GameOver.Count) ~ delete _;
 	}
 
 	public Textures Textures = new .() ~ delete _;

@@ -27,7 +27,10 @@ class EntryPoint
 #endif
 
 	private static Game s_Game;
+
+#if !GAME_SCREEN_FREE
 	private static RenderTexture s_ScreenTexture;
+#endif
 
 	private static Vector2 s_MousePositionViewport = .Zero;
 	private static Vector2 s_ViewportSize = .Zero;
@@ -39,11 +42,22 @@ class EntryPoint
 
 	public static void Start(String[] args)
 	{
-		Raylib.SetConfigFlags(.FLAG_VSYNC_HINT | .FLAG_WINDOW_RESIZABLE);
+		ConfigFlags flags = .FLAG_VSYNC_HINT | .FLAG_WINDOW_RESIZABLE;
+#if GAME_SCREEN_FREE
+#endif
+		flags |= .FLAG_MSAA_4X_HINT;
+
+		Raylib.SetConfigFlags(flags);
 		Raylib.InitWindow(1280, 720, "Minesweeper+");
 		Raylib.InitAudioDevice();
 
+#if !GAME_SCREEN_FREE
+#if GAME_SCREEN_CONSTANT
 		s_ScreenTexture = Raylib.LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
+#else
+		s_ScreenTexture = Raylib.LoadRenderTexture(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT);
+#endif
+#endif
 
 		InitAssets();
 		s_Game = scope Game();
@@ -53,11 +67,13 @@ class EntryPoint
 #else
 		while (!Raylib.WindowShouldClose())
 		{
-			Loop(s_Game, s_ScreenTexture);
+			Loop(s_Game);
 		}
 #endif
 
+#if !GAME_SCREEN_FREE
 		Raylib.UnloadRenderTexture(s_ScreenTexture);
+#endif
 
 		DestroyAssets();
 
@@ -65,35 +81,42 @@ class EntryPoint
 		Raylib.CloseWindow();
 	}
 
-	private static void Loop(Game game, RenderTexture screenTexture)
+	private static void Loop(Game game)
 	{
-		game.Update();
-
-		Raylib.BeginDrawing();
-		Raylib.BeginTextureMode(screenTexture);
-
-		game.Render();
-
-		Raylib.EndTextureMode();
-
-		// Draw screen
 		let viewportSize = getLargestSizeForViewport();
 		let viewportPos = getCenteredPositionForViewport(viewportSize);
 
+		s_ViewportSize = viewportSize;
+		s_ViewportScale =(int)(viewportSize.x / SCREEN_WIDTH);
+
+		game.Update();
+
+		Raylib.BeginDrawing();
+
+		game.RenderUI();
+
+#if !GAME_SCREEN_FREE
+		Raylib.BeginTextureMode(s_ScreenTexture);
+#endif
+
+		game.Render();
+
+#if !GAME_SCREEN_FREE
+		Raylib.EndTextureMode();
+
+		// Draw screen
 		let relativeMouseX = Raylib.GetMouseX() - viewportPos.x;
 		let relativeMouseY = Raylib.GetMouseY() - viewportPos.y;
 		s_MousePositionViewport = .((relativeMouseX / viewportSize.x) * SCREEN_WIDTH, (relativeMouseY / viewportSize.y) * SCREEN_HEIGHT);
 		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, SCREEN_WIDTH), Math.Clamp(s_MousePositionViewport.y, 0, SCREEN_HEIGHT));
 
-		s_ViewportSize = viewportSize;
-		s_ViewportScale =(int)(viewportSize.x / SCREEN_WIDTH);
-
-		Raylib.DrawTexturePro(screenTexture.texture,
-			.(0, 0, screenTexture.texture.width, -screenTexture.texture.height),
+		Raylib.DrawTexturePro(s_ScreenTexture.texture,
+			.(0, 0, s_ScreenTexture.texture.width, -s_ScreenTexture.texture.height),
 			.(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y),
 			.(0, 0),
 			0,
 			Raylib.WHITE);
+#endif
 
 		Raylib.EndDrawing();
 	}
@@ -110,7 +133,11 @@ class EntryPoint
 	        aspectWidth = aspectHeight * SCREEN_ASPECT_RATIO;
 	    }
 
+#if GAME_SCREEN_CONSTANT
 		return .(Math.Round2Nearest(aspectWidth, SCREEN_WIDTH), Math.Round2Nearest(aspectHeight, SCREEN_HEIGHT));
+#else
+		return .(aspectWidth, aspectHeight);
+#endif
 	}
 
 	private static Vector2 getCenteredPositionForViewport(Vector2 aspectSize)

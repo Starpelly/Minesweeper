@@ -35,16 +35,18 @@ class OpenedTileParticle : Particle
 	public float Rotation = 0.0f;
 	public float AngleOffset = 0.0f;
 
-	private int m_Type = 0;
+	private uint m_TileType = 0;
+	private int m_GraphicIndex = 0;
 
 	private Vector2 m_Velocity = .Zero;
 	private float gravity = 3.1f;
 	private float m_Opacity = 1.0f;
 
-	public this(Vector2 position, int type)
+	public this(Vector2 position, uint type, int graphicIndex)
 	{
 		Position = position;
-		m_Type = type;
+		m_TileType = type;
+		m_GraphicIndex = graphicIndex;
 
 		gravity = Math.RandomFloat32(10.5f, 16.3f) * 64;
 		m_Velocity.x = (Game.Random.Next(0, 2) == 0 ? -1 : 1) * Math.RandomFloat32(48, 85);
@@ -70,11 +72,11 @@ class OpenedTileParticle : Particle
 
 	public override void Render()
 	{
-		let row = 0;
+		let row = m_TileType;
 
 		let color = Color(255, 255, 255, (uint8)(m_Opacity * 255.0f));
 		// Raylib.DrawRectanglePro(.(Position.x, Position.y + 12, 18, 18), .(9, 9), Rotation, .(0, 0, 0, 50));
-		if (m_Type == 0)
+		if (m_GraphicIndex == 0)
 		{
 			Raylib.DrawTexturePro(Assets.Textures.Tiles.Texture, .(0, 18 * row, 18, 18), .(Position.x + 8, Position.y + 8, 18 * Scale, 18 * Scale), Vector2(9, 9) * Scale, Rotation + AngleOffset, color);
 		}
