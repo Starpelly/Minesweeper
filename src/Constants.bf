@@ -1,5 +1,3 @@
-using RaylibBeef;
-
 namespace Minesweeper;
 
 static
@@ -10,16 +8,25 @@ static
 
 	public const float SCREEN_ASPECT_RATIO = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
 #elif GAME_SCREEN_FREE
-	public static int32 SCREEN_WIDTH => Raylib.GetScreenWidth();
-	public static int32 SCREEN_HEIGHT => Raylib.GetScreenHeight();
+	public static int32 SCREEN_WIDTH => RaylibBeef.Raylib.GetScreenWidth();
+	public static int32 SCREEN_HEIGHT => RaylibBeef.Raylib.GetScreenHeight();
 
 	public static float SCREEN_ASPECT_RATIO => (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
+#else
+
+#if BF_PLATFORM_WASM
+	public const int32 BASE_SCREEN_WIDTH = 640;
+	public const int32 BASE_SCREEN_HEIGHT = 360;
+
+	public static int32 SCREEN_WIDTH = BASE_SCREEN_WIDTH;
+	public static int32 SCREEN_HEIGHT = BASE_SCREEN_HEIGHT;
 #else
 	public const int32 BASE_SCREEN_WIDTH = 1280;
 	public const int32 BASE_SCREEN_HEIGHT = 720;
 
 	public static int32 SCREEN_WIDTH = 1280;
 	public static int32 SCREEN_HEIGHT = 720;
+#endif
 
 	public static float SCREEN_ASPECT_RATIO => (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
 #endif

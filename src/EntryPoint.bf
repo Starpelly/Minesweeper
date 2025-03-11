@@ -5,7 +5,7 @@ namespace Minesweeper;
 
 class EntryPoint
 {
-	#if BF_PLATFORM_WASM
+#if BF_PLATFORM_WASM
 	[CLink, CallingConvention(.Stdcall)]
 	private static extern void emscripten_console_log(char8* utf8String);
 
@@ -22,7 +22,7 @@ class EntryPoint
 
 	private static void emscriptenMainLoop()
 	{
-		Loop(s_Game, s_ScreenTexture);
+		Loop(s_Game);
 	}
 #endif
 
@@ -123,15 +123,16 @@ class EntryPoint
 
 	private static Vector2 getLargestSizeForViewport()
 	{
-	    let windowSize = Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
+		let windowSize = Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
 
-	    float aspectWidth = windowSize.x;
-	    float aspectHeight = aspectWidth / SCREEN_ASPECT_RATIO;
-	    if (aspectHeight > windowSize.y)
-	    {
-	        aspectHeight = windowSize.y;
-	        aspectWidth = aspectHeight * SCREEN_ASPECT_RATIO;
-	    }
+		float aspectWidth = windowSize.x;
+		float aspectHeight = aspectWidth / SCREEN_ASPECT_RATIO;
+
+		if (aspectHeight > windowSize.y)
+		{
+			aspectHeight = windowSize.y;
+			aspectWidth = aspectHeight * SCREEN_ASPECT_RATIO;
+		}
 
 #if GAME_SCREEN_CONSTANT
 		return .(Math.Round2Nearest(aspectWidth, SCREEN_WIDTH), Math.Round2Nearest(aspectHeight, SCREEN_HEIGHT));
@@ -144,9 +145,9 @@ class EntryPoint
 	{
 		let windowSize = Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
 
-	    float viewportX = (windowSize.x / 2.0f) - (aspectSize.x / 2.0f);
-	    float viewportY = (windowSize.y / 2.0f) - (aspectSize.y / 2.0f);
+		float viewportX = (windowSize.x / 2.0f) - (aspectSize.x / 2.0f);
+		float viewportY = (windowSize.y / 2.0f) - (aspectSize.y / 2.0f);
 
-	    return .(viewportX, viewportY);
+		return .(viewportX, viewportY);
 	}
 }

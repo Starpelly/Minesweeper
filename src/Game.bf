@@ -11,14 +11,16 @@ class Game
 	// Constants / Structs
 	// -------------------
 
-	private const int32 UI_SCALE = 2;
-	private const int32 UI_SCREEN_WIDTH = BASE_SCREEN_WIDTH / UI_SCALE;
-	private const int32 UI_SCREEN_HEIGHT = BASE_SCREEN_HEIGHT / UI_SCALE;
+	private static int32 UI_SCALE => SCREEN_WIDTH / 640;
+	private static int32 UI_SCREEN_WIDTH => BASE_SCREEN_WIDTH / UI_SCALE;
+	private static int32 UI_SCREEN_HEIGHT => BASE_SCREEN_HEIGHT / UI_SCALE;
+
+	private static float BASE_CAMERA_ZOOM => (SCREEN_WIDTH / 640) * 2;
 
 	private const uint32 TILE_SIZE = 16;
 	private const uint32 TILE_SPACING = 1;
 	private const uint32 LINE_WIDTH = 1;
-	private const int BG_CHECKER_SIZE = 32;
+	private const int BG_CHECKER_SIZE = 48;
 
 	private const uint MAX_LIVES = 3;
 	private const float SECONDS_PER_COMBO = 4.0f;
@@ -250,7 +252,7 @@ class Game
 	public this()
 	{
 		m_Board = .();
-		m_Camera = Camera2D(.Zero, .Zero, 0, 4);
+		m_Camera = Camera2D(.Zero, .Zero, 0, BASE_CAMERA_ZOOM);
 
 		m_TargetCameraZoom = m_Camera.zoom;
 		m_NewCameraZoom = m_Camera.zoom;
@@ -1016,30 +1018,30 @@ class Game
 		// m_Camera.zoom = (lerpVec.x / lerpVec.y) * baseZoom;
 
 #else
-		m_TargetCameraZoom = 4.0f;
+		m_TargetCameraZoom = 1.0f;
 
 		if (m_Board.Width > 16 || m_Board.Height > 8)
 		{
-			m_TargetCameraZoom = 3f;
+			m_TargetCameraZoom = 0.75f;
 		}
 		if (m_Board.Width > 21 || m_Board.Height > 10)
 		{
-			m_TargetCameraZoom = 2.5f;
+			m_TargetCameraZoom = 0.625f;
 		}
 		if (m_Board.Width > 25 || m_Board.Height > 12)
 		{
-			m_TargetCameraZoom = 2f;
+			m_TargetCameraZoom = 0.5f;
 		}
 		if (m_Board.Width > 31 || m_Board.Height > 15)
 		{
-			m_TargetCameraZoom = 1.75f;
+			m_TargetCameraZoom = 0.438f;
 		}
 		if (m_Board.Width > 36 || m_Board.Height > 18)
 		{
-			m_TargetCameraZoom = 1f;
+			m_TargetCameraZoom = 0.25f;
 		}
 
-		m_Camera.zoom = Math.Lerp(m_Camera.zoom, m_TargetCameraZoom, Raylib.GetFrameTime() * 18.0f);
+		m_Camera.zoom = Math.Lerp(m_Camera.zoom, m_TargetCameraZoom * BASE_CAMERA_ZOOM, Raylib.GetFrameTime() * 18.0f);
 #endif
 
 		// Update timers
