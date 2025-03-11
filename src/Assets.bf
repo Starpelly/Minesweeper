@@ -20,9 +20,14 @@ public static struct Data
 		public static uint8[?] Boom = Compiler.ReadBinary("assets/sounds/boom.wav");
 		public static uint8[?] Tap = Compiler.ReadBinary("assets/sounds/tap.wav");
 		public static uint8[?] Win = Compiler.ReadBinary("assets/sounds/win.wav");
-		public static uint8[?] ClearArea = Compiler.ReadBinary("assets/sounds/clear_area.wav");
-		public static uint8[?] FailedChord = Compiler.ReadBinary("assets/sounds/failed_chord.wav");
+		public static uint8[?] ClearArea = Compiler.ReadBinary("assets/sounds/clear-area.wav");
+		public static uint8[?] FailedChord = Compiler.ReadBinary("assets/sounds/failed-chord.wav");
+		public static uint8[?] Hover = Compiler.ReadBinary("assets/sounds/hover.wav");
 		// public static uint8[?] GameOver = Compiler.ReadBinary("assets/sounds/gameover.wav");
+	}
+
+	public static struct Fonts
+	{
 	}
 }
 
@@ -72,6 +77,30 @@ public class AssetManager
 		}
 	}
 
+	public class FontEx
+	{
+		public Font Font { get; private set; }
+
+		public this(uint8* data, int32 dataCount, int32 fontSize)
+		{
+			Font = Raylib.LoadFontFromMemory(".ttf", (char8*)data, dataCount, 32, null, 0);
+		}
+
+		public ~this()
+		{
+			Raylib.UnloadFont(Font);
+		}
+
+		private void loadBitmapFont(uint8* data, int32 dataCount)
+		{
+			let img = Raylib.LoadImageFromMemory(".png", (char8*)data, dataCount);
+
+			Font = Raylib.LoadFontFromImage(img, .(255, 0, 255, 255), 32);
+
+			Raylib.UnloadImage(img);
+		}
+	}
+
 	public class Textures
 	{
 		public readonly TextureEx Flags = new .(&Data.Textures.Flags, Data.Textures.Flags.Count) ~ delete _;
@@ -90,11 +119,17 @@ public class AssetManager
 		public readonly SoundFX Win = new .(&Data.Sounds.Win, Data.Sounds.Win.Count) ~ delete _;
 		public readonly SoundFX ClearArea = new .(&Data.Sounds.ClearArea, Data.Sounds.ClearArea.Count) ~ delete _;
 		public readonly SoundFX FailedChord = new .(&Data.Sounds.FailedChord, Data.Sounds.FailedChord.Count) ~ delete _;
+		public readonly SoundFX Hover = new .(&Data.Sounds.Hover, Data.Sounds.Hover.Count) ~ delete _;
 		// public readonly SoundFX GameOver = new .(&Data.Sounds.GameOver, Data.Sounds.GameOver.Count) ~ delete _;
+	}
+
+	public class Fonts
+	{
 	}
 
 	public Textures Textures = new .() ~ delete _;
 	public Sounds Sounds = new .() ~ delete _;
+	public Fonts Fonts = new .() ~ delete _;
 
 	public this()
 	{

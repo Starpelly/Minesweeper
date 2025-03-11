@@ -5,6 +5,8 @@ namespace Minesweeper;
 
 class EntryPoint
 {
+	private const bool VIEWPORT_USE_RENDERTEXTURE = false;
+
 #if BF_PLATFORM_WASM
 	[CLink, CallingConvention(.Stdcall)]
 	private static extern void emscripten_console_log(char8* utf8String);
@@ -40,6 +42,8 @@ class EntryPoint
 	public static Vector2 ViewportSize => s_ViewportSize;
 	public static int ViewportScale => s_ViewportScale;
 
+	private static Vector2 s_LastViewportSize = .(0, 0);
+
 	public static void Start(String[] args)
 	{
 		ConfigFlags flags = .FLAG_VSYNC_HINT | .FLAG_WINDOW_RESIZABLE;
@@ -48,14 +52,21 @@ class EntryPoint
 		flags |= .FLAG_MSAA_4X_HINT;
 
 		Raylib.SetConfigFlags(flags);
-		Raylib.InitWindow(1280, 720, "Minesweeper+");
+		Raylib.InitWindow(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT, "Minesweeper+");
 		Raylib.InitAudioDevice();
+
+		SCREEN_WIDTH = Raylib.GetScreenWidth();
+		SCREEN_HEIGHT = Raylib.GetScreenHeight();
 
 #if !GAME_SCREEN_FREE
 #if GAME_SCREEN_CONSTANT
 		s_ScreenTexture = Raylib.LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
 #else
-		s_ScreenTexture = Raylib.LoadRenderTexture(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT);
+		if (VIEWPORT_USE_RENDERTEXTURE)
+		{
+			s_ScreenTexture = Raylib.LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
+			s_LastViewportSize = .(SCREEN_WIDTH, SCREEN_HEIGHT);
+		}
 #endif
 #endif
 
@@ -89,6 +100,24 @@ class EntryPoint
 		s_ViewportSize = viewportSize;
 		s_ViewportScale =(int)(viewportSize.x / SCREEN_WIDTH);
 
+		if (s_ViewportSize != s_LastViewportSize)
+		{
+			if (VIEWPORT_USE_RENDERTEXTURE)
+			{
+				Raylib.UnloadRenderTexture(s_ScreenTexture);
+				s_ScreenTexture = Raylib.LoadRenderTexture((int32)s_ViewportSize.x, (int32)s_ViewportSize.y);
+			}
+
+			SCREEN_WIDTH = (int32)s_ViewportSize.x;
+			SCREEN_HEIGHT = (int32)s_ViewportSize.y;
+		}
+		s_LastViewportSize = s_ViewportSize;
+
+		let relativeMouseX = Raylib.GetMouseX() - viewportPos.x;
+		let relativeMouseY = Raylib.GetMouseY() - viewportPos.y;
+		s_MousePositionViewport = .((relativeMouseX / viewportSize.x) * SCREEN_WIDTH, (relativeMouseY / viewportSize.y) * SCREEN_HEIGHT);
+		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, SCREEN_WIDTH), Math.Clamp(s_MousePositionViewport.y, 0, SCREEN_HEIGHT));
+
 		game.Update();
 
 		Raylib.BeginDrawing();
@@ -96,26 +125,41 @@ class EntryPoint
 		game.RenderUI();
 
 #if !GAME_SCREEN_FREE
-		Raylib.BeginTextureMode(s_ScreenTexture);
+
+		if (VIEWPORT_USE_RENDERTEXTURE)
+		{
+			Raylib.BeginTextureMode(s_ScreenTexture);
+		}
+		else
+		{
+			Raylib.BeginScissorMode((int32)viewportPos.x, (int32)viewportPos.y, (int32)viewportSize.x, (int32)viewportSize.y);
+			Rlgl.rlViewport((int32)(viewportPos.x), -(int32)(viewportPos.y), Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
+		}
 #endif
 
 		game.Render();
 
 #if !GAME_SCREEN_FREE
-		Raylib.EndTextureMode();
+
+		if (VIEWPORT_USE_RENDERTEXTURE)
+		{
+			Raylib.EndTextureMode();
+		}
+		else
+		{
+			Raylib.EndScissorMode();
+			Rlgl.rlViewport(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
+		}
 
 		// Draw screen
-		let relativeMouseX = Raylib.GetMouseX() - viewportPos.x;
-		let relativeMouseY = Raylib.GetMouseY() - viewportPos.y;
-		s_MousePositionViewport = .((relativeMouseX / viewportSize.x) * SCREEN_WIDTH, (relativeMouseY / viewportSize.y) * SCREEN_HEIGHT);
-		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, SCREEN_WIDTH), Math.Clamp(s_MousePositionViewport.y, 0, SCREEN_HEIGHT));
-
+		/*
 		Raylib.DrawTexturePro(s_ScreenTexture.texture,
 			.(0, 0, s_ScreenTexture.texture.width, -s_ScreenTexture.texture.height),
 			.(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y),
 			.(0, 0),
 			0,
 			Raylib.WHITE);
+		*/
 #endif
 
 		Raylib.EndDrawing();

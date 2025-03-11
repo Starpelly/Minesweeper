@@ -11,16 +11,22 @@ class Game
 	// Constants
 	// ---------
 
-	private static int32 UI_SCALE => SCREEN_WIDTH / 640;
-	private static int32 UI_SCREEN_WIDTH => BASE_SCREEN_WIDTH / UI_SCALE;
-	private static int32 UI_SCREEN_HEIGHT => BASE_SCREEN_HEIGHT / UI_SCALE;
+	private static float UI_SCALE => 2.0f;
+	private static float UI_SCREEN_WIDTH => 1280.0f / UI_SCALE;
+	private static float UI_SCREEN_HEIGHT => 720.0f / UI_SCALE;
 
-	private static float BASE_CAMERA_ZOOM => (SCREEN_WIDTH / 640) * 2;
+	private static float VIEWPORT_SCALE => (float)SCREEN_WIDTH / (float)BASE_SCREEN_WIDTH;
+
+	private static float BASE_CAMERA_ZOOM => 4.0f;
+
+	private let TILE_COLOR_0 = Color(38, 92, 66, 255);
+	private let TILE_COLOR_1 = Color(99, 199, 77, 255);
 
 	private const uint32 TILE_SIZE = 16;
 	private const uint32 TILE_SPACING = 1;
 	private const uint32 LINE_WIDTH = 1;
-	private const int BG_CHECKER_SIZE = 48;
+
+	private static int BG_CHECKER_SIZE => (int)(48 * VIEWPORT_SCALE);
 
 	private const uint MAX_LIVES = 3;
 	private const float SECONDS_PER_COMBO = 4.0f;
@@ -225,6 +231,9 @@ class Game
 
 	private RenderTexture2D m_UIRenderTexture;
 
+	private List<(int, int)> m_MinesToExplode = new .() ~ delete _;
+	private float m_MinesToExplodeTimer = 0.0f;
+
 	// -----------------
 	// Private accessors
 	// -----------------
@@ -243,6 +252,12 @@ class Game
 			ret.y -= 1;
 
 		return ret;
+	}
+
+	private bool MouseHoveringBoard()
+	{
+		let mp = GetBoardMouseCoords();
+		return mp.x >= 0 && mp.y >= 0 && mp.x < m_Board.Width && mp.y < m_Board.Height;
 	}
 
 	private Vector2 GetMousePosition()
@@ -267,7 +282,7 @@ class Game
 		m_NewCameraZoom = m_Camera.zoom;
 		m_NewCameraTarget = m_Camera.target;
 
-		m_UIRenderTexture = Raylib.LoadRenderTexture(UI_SCREEN_WIDTH, UI_SCREEN_HEIGHT);
+		m_UIRenderTexture = Raylib.LoadRenderTexture((int32)UI_SCREEN_WIDTH, (int32)UI_SCREEN_HEIGHT);
 
 		RestartGame();
 	}
@@ -297,13 +312,28 @@ class Game
 	{
 		uint startMineCount = DEFAULT_BOARD_MINES + m_State.StartMineAdd;
 
+		let newBoardWidth = (int)Math.Clamp(m_State.NextColumnCount, DEFAULT_BOARD_WIDTH, 30);
+		let newBoardHeight = (int)Math.Clamp(m_State.NextRowCount, DEFAULT_BOARD_HEIGHT, 16);
+
+		let maxMinesCount = (uint)Math.Floor((newBoardWidth * newBoardHeight) * 0.3f); // 30% of the total board area
+		let newMineCount = Math.Clamp(startMineCount, startMineCount, maxMinesCount);
+
+		Console.WriteLine(scope $"Max Mine Count: {maxMinesCount}");
+
 		let newBoard = Board()
 		{
-			Width = (int)Math.Clamp(m_State.NextColumnCount, DEFAULT_BOARD_WIDTH, 30),
-			Height = (int)Math.Clamp(m_State.NextRowCount, DEFAULT_BOARD_HEIGHT, 16),
-			Mines = Math.Clamp(startMineCount, startMineCount, 99)
+			Width = newBoardWidth,
+			Height = newBoardHeight,
+			Mines = (uint)newMineCount,
 		};
 		Remake(newBoard, false);
+	}
+
+	public void OnMineExplode(bool start)
+	{
+		Raylib.PlaySound(Assets.Sounds.Boom.Sound);
+		ShakeCamera((start) ? 45 : 24 / 10.0f, 8, 0.6f);
+		CreateParticle(new ExplosionFlashParticle((start) ? 240 : 15));
 	}
 
 	public void Remake(Board board, bool loseState)
@@ -418,8 +448,8 @@ class Game
 		{
 			m_State.Tiles[x, y] = .Opened;
 
-			let tileType = (x + y) % 2;
-			CreateParticle(new OpenedTileParticle(.(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING)), m_State.TileType, tileType));
+			let tileColor = ((x + y) % 2 == 0) ? TILE_COLOR_0 : TILE_COLOR_1;
+			CreateParticle(new OpenedTileParticle(.(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING)), tileColor));
 			ShakeCamera(1f, 4, 2);
 
 			Raylib.PlaySound(Assets.Sounds.Click.Sound);
@@ -428,9 +458,8 @@ class Game
 		// Lose if we opened a mine
 		if (m_State.Tiles[x, y] == .Opened && m_State.Mines[x, y] == true)
 		{
-			Raylib.PlaySound(Assets.Sounds.Boom.Sound);
-			ShakeCamera(24, 8, 0.4f);
-			CreateParticle(new ExplosionFlashParticle());
+			OnMineExplode(true);
+			m_MinesToExplodeTimer = 0.0f;
 
 			m_State.SessionTimer.Stop();
 			m_State.ComboTimer.Stop();
@@ -453,6 +482,7 @@ class Game
 					if (m_State.Mines[bx, by] && m_State.Tiles[bx, by] != .Flaged)
 					{
 						m_State.Tiles[bx, by] = .Opened;
+						// m_MinesToExplode.Add((bx, by));
 					}
 					else
 					{
@@ -477,6 +507,7 @@ class Game
 					{
 						if (m_State.Tiles[k, l] == .Closed)
 						{
+							Raylib.SetSoundVolume(Assets.Sounds.ClearArea.Sound, 0.35f);
 							Raylib.PlaySound(Assets.Sounds.ClearArea.Sound);
 							Open(k, l, wasWaitingFC);
 						}
@@ -851,8 +882,22 @@ class Game
 	// Events
 	// ------
 
+	private Vector2I m_LastHoveringTile = .(0, 0);
+
 	public void Update()
 	{
+		m_MinesToExplodeTimer += Raylib.GetFrameTime();
+		if (m_MinesToExplodeTimer >= 0.08f && m_MinesToExplode.Count > 0)
+		{
+			let mine = m_MinesToExplode[0];
+			m_State.Tiles[mine.0, mine.1] = .Opened;
+
+			OnMineExplode(false);
+
+			m_MinesToExplode.RemoveAt(0);
+			m_MinesToExplodeTimer = 0.0f;
+		}
+
 #if DEBUG
 		// Debug: Restart game
 		if (Raylib.IsKeyPressed(.KEY_R))
@@ -930,7 +975,7 @@ class Game
 
 #if GAME_SCREEN_FREE
 		let baseZoom = 6.0f;
-		let baseBoardSize = BOARD_SIZE * baseZoom;
+		let baseBoardSize = GetBoardSize() * baseZoom;
 
 		// Camera zoom
 		if (SCREEN_WIDTH < (baseBoardSize.x))
@@ -1047,10 +1092,14 @@ class Game
 		}
 		if (m_Board.Width > 36 || m_Board.Height > 18)
 		{
+			m_TargetCameraZoom = 0.375f;
+		}
+		if (m_Board.Width > 42 || m_Board.Height > 22)
+		{
 			m_TargetCameraZoom = 0.25f;
 		}
 
-		m_Camera.zoom = Math.Lerp(m_Camera.zoom, m_TargetCameraZoom * BASE_CAMERA_ZOOM, Raylib.GetFrameTime() * 18.0f);
+		m_Camera.zoom = Math.Lerp(m_Camera.zoom, (m_TargetCameraZoom * BASE_CAMERA_ZOOM) * (SCREEN_WIDTH / 1280.0f), Raylib.GetFrameTime() * 18.0f);
 #endif
 
 		// Update timers
@@ -1069,6 +1118,16 @@ class Game
 		{
 			particle.Update();
 		}
+
+		if (MouseHoveringBoard() && GetBoardMouseCoords() != m_LastHoveringTile && m_State.State == .Game)
+		{
+			/*
+			Raylib.StopSound(Assets.Sounds.Hover.Sound);
+			Raylib.SetSoundVolume(Assets.Sounds.Hover.Sound, 0.25f);
+			Raylib.PlaySound(Assets.Sounds.Hover.Sound);
+			*/
+		}
+		m_LastHoveringTile = GetBoardMouseCoords();
 
 		// Camera manipulation
 		// updateCameraControl();
@@ -1098,7 +1157,6 @@ class Game
 				float shakeStrength = shake.Strength * decayFactor;
 
 				m_CamShakeInfluence += .(Math.RandomFloat32(-shakeStrength, shakeStrength), Math.RandomFloat32(-shakeStrength, shakeStrength));
-				// m_Camera.target += .(Math.RandomFloat32(-shakeStrength, shakeStrength), Math.RandomFloat32(-shakeStrength, shakeStrength));
 			}
 		}
 #if false
@@ -1129,7 +1187,6 @@ class Game
 				m_State.StartMineAdd++;
 				m_State.MineTimer.Restart();
 			}
-			Console.WriteLine(scope $"0: {m_State.MineTimer.Elapsed.TotalSeconds}, 1: {m_State.SecondsToNewMine}");
 		}
 
 		// Update combo timer
@@ -1237,7 +1294,14 @@ class Game
 		{
 			renderBackground();
 
-			let drawCamera = Camera2D(m_Camera.offset, m_Camera.target + m_CamShakeInfluence, m_Camera.rotation, m_Camera.zoom);
+			var shakeInf = m_CamShakeInfluence;
+			/*if (shakeInf.x < Raymath.EPSILON)
+				shakeInf.x = 0.0f;
+			if (shakeInf.y < Raymath.EPSILON)
+				shakeInf.y = 0.0f;
+			*/
+
+			let drawCamera = Camera2D(m_Camera.offset, m_Camera.target + shakeInf, m_Camera.rotation, m_Camera.zoom);
 			Raylib.BeginMode2D(drawCamera);
 			{
 				renderBoard();
@@ -1270,7 +1334,7 @@ class Game
 			Raylib.DrawRectangleRec(.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), .(0, 0, 0, 200));
 
 			let youWinTxt = "You Win!!!";
-			let youWinSize = 30 * UI_SCALE;
+			let youWinSize = 30 * (int32)UI_SCALE;
 			let txtMeasure = Raylib.MeasureText(youWinTxt, youWinSize);
 
 			Raylib.DrawText(youWinTxt, (int32)(SCREEN_WIDTH / 2) - (txtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
@@ -1280,14 +1344,14 @@ class Game
 			Raylib.DrawRectangleRec(.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), .(255, 0, 0, 120));
 
 			let youWinTxt = "Game Over!!! :(";
-			let youWinSize = 30 * UI_SCALE;
+			let youWinSize = 30 * (int32)UI_SCALE;
 			let txtMeasure = Raylib.MeasureText(youWinTxt, youWinSize);
 
 			if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER)
 			{
 				let str = "(Left Click to restart)";
-				let clTxtMeasure = Raylib.MeasureText(str, 10 * UI_SCALE);
-				Raylib.DrawText(str, (int32)(SCREEN_WIDTH / 2) - (clTxtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) + 20, 10 * UI_SCALE, .White);
+				let clTxtMeasure = Raylib.MeasureText(str, 10 * (int32)UI_SCALE);
+				Raylib.DrawText(str, (int32)(SCREEN_WIDTH / 2) - (clTxtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) + 20, 10 * (int32)UI_SCALE, .White);
 			}
 
 			Raylib.DrawText(youWinTxt, (int32)(SCREEN_WIDTH / 2) - (txtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
@@ -1415,16 +1479,16 @@ class Game
 				let triangleX = (timerX + timerWidth) - cornerWidth;
 				Raylib.DrawTriangle(.(triangleX, timerY), .(triangleX, timerY + timerHeight), .(triangleX + cornerWidth, timerY), bgColor);
 
-				Raylib.DrawText(text, timerX + 4, timerY + (textPadding / 2), fontSize, Color.White);
+				Raylib.DrawText(text, timerX + 4, timerY + (textPadding / 2), fontSize, .White);
 			}
 
 			// Points
 			{
-				drawSideThing(scope $"{m_State.Points} points", 196, 10, 20, 22, .Black);
+				drawSideThing(scope $"{m_State.Points} points", 196, 8, 20, 22, .Black);
 			}
 			// Total Timer
 			{
-				drawSideThing(scope $"Time: {timeFormatted(.. scope .(), m_State.SessionTimer)}", 174, 32, 10, 12, .(25, 25, 25, 255));
+				drawSideThing(scope $"Time: {timeFormatted(.. scope .(), m_State.SessionTimer)}", 174, 32 - 2, 10, 12, .(25, 25, 25, 255));
 			}
 		}
 
@@ -1449,9 +1513,9 @@ class Game
 		{
 			// Progress bar
 			{
-				let barY = 10;
+				let barY = 8;
 
-				float width = 200;
+				float width = 195;
 
 				let barXPos = UI_SCREEN_WIDTH - width;
 				let barYPos = barY;
@@ -1550,12 +1614,15 @@ class Game
 		let bgWidth = SCREEN_WIDTH;
 		let bgHeight = SCREEN_HEIGHT;
 
-		Raylib.ClearBackground(Color(90, 105, 136, 255));
+		let clearColor = Color(90, 105, 136, 255);
+		Raylib.ClearBackground(clearColor);
 
-		let checkerOffsetX = (float)Raylib.GetTime() * 5;
-		let checkerOffsetY = (float)Raylib.GetTime() * 0;
+		var checkerOffsetX = (float)Raylib.GetTime() * 10;
+		var checkerOffsetY = (float)Raylib.GetTime() * 0;
+
+		// checkerOffsetX = GetMousePosition().x;
+
 		let checkerBoardOffset = Vector2(Math.Repeat(checkerOffsetX, BG_CHECKER_SIZE * 2), Math.Repeat(checkerOffsetY, BG_CHECKER_SIZE * 2));
-
 		for (let y < (bgHeight / BG_CHECKER_SIZE) + 3)
 		{
 			for (let x < (bgWidth / BG_CHECKER_SIZE) + 3)
@@ -1565,10 +1632,12 @@ class Game
 					let xpos = (x * BG_CHECKER_SIZE) - checkerBoardOffset.x;
 					let ypos = (y * BG_CHECKER_SIZE) - checkerBoardOffset.y;
 
-					Raylib.DrawRectangleRec(.(xpos, ypos, BG_CHECKER_SIZE, BG_CHECKER_SIZE), Color(0, 0, 0, 10));
+					Raylib.DrawRectangleRec(.(xpos, ypos, BG_CHECKER_SIZE, BG_CHECKER_SIZE), Color(0, 0, 0, 14));
 				}
 			}
 		}
+
+		Raylib.DrawRectangleGradientV(0, 0, bgWidth, bgHeight + 120, .(clearColor.r, clearColor.g, clearColor.b, 0), clearColor);
 	}
 
 	private void renderBoard()
@@ -1579,8 +1648,8 @@ class Game
 		Raylib.DrawRectangleRec(boardRec - Rectangle(7, -6, 0, 0), .(0, 0, 0, 40));
 
 		// Board bg
-		// Raylib.DrawRectangleRec(boardRec, .(192, 204, 216, 255));
 		Raylib.DrawRectangleRec(boardRec, .(93, 105, 129, 255));
+		// Raylib.DrawRectangleRec(boardRec, .(192, 204, 216, 255));
 
 		// Board tiles
 		{
@@ -1588,7 +1657,14 @@ class Game
 			{
 				for (let y < m_Board.Height)
 				{
+					// let tilePos = Vector2(GetBoardPos().x + (x * (TILE_SIZE + TILE_SPACING)), GetBoardPos().y + (y * (TILE_SIZE + TILE_SPACING)));
+					// let tileColor = ((x + y) % 2) == 0 ? Color(236, 240, 251, 255) : Color(236, 240, 251, 255);
+
+					// if ((x + y) % 2 == 0)
+					// Raylib.DrawTexture(Assets.Textures.EmptyTile.Texture, (int32)tilePos.x, (int32)tilePos.y, tileColor);
+
 					Raylib.DrawRectangleRec(.(GetBoardPos().x + (x * (TILE_SIZE + TILE_SPACING)), GetBoardPos().y + (y * (TILE_SIZE + TILE_SPACING)), TILE_SIZE, TILE_SIZE), .(192, 204, 216, 255));
+					// Raylib.DrawRectangleRec(.(GetBoardPos().x + (x * (TILE_SIZE + TILE_SPACING)), GetBoardPos().y + (y * (TILE_SIZE + TILE_SPACING)), TILE_SIZE, TILE_SIZE), .(192, 204, 216, 255));
 				}
 			}
 		}
@@ -1599,9 +1675,18 @@ class Game
 		// Board cursor frame
 		if (m_State.State == .Game)
 		{
-			if (GetBoardMouseCoords().x >= 0 && GetBoardMouseCoords().y >= 0
-				&& GetBoardMouseCoords().x < m_Board.Width && GetBoardMouseCoords().y < m_Board.Height)
-			Raylib.DrawTexture(Assets.Textures.Frame.Texture, (int32)(GetBoardMouseCoords().x * (TILE_SIZE + TILE_SPACING) - 1), (int32)(GetBoardMouseCoords().y * (TILE_SIZE + TILE_SPACING) - 1), Color.White);
+			if (MouseHoveringBoard())
+			{
+				let cursorDrawPos = Vector2(GetBoardMouseCoords().x * (TILE_SIZE + TILE_SPACING) - 1, GetBoardMouseCoords().y * (TILE_SIZE + TILE_SPACING) - 1);
+				let tapping = Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT) || Raylib.IsMouseButtonDown(.MOUSE_BUTTON_RIGHT);
+
+				// Raylib.DrawTexture(Assets.Textures.Frame.Texture, (int32)(GetBoardMouseCoords().x * (TILE_SIZE + TILE_SPACING) - 1), (int32)(GetBoardMouseCoords().y * (TILE_SIZE + TILE_SPACING) - 1), Color.White);
+				Raylib.DrawTextureRec(
+					Assets.Textures.Frame.Texture,
+					.(tapping ? 18 : 0, 0, 18, 18),
+					cursorDrawPos,
+					Color.White);
+			}
 		}
 
 		// Board outline
@@ -1625,6 +1710,7 @@ class Game
 			let numStr = number.ToString(.. scope .());
 
 			Raylib.DrawText(numStr, ((int32)drawPos.x) - 2, ((int32)drawPos.y) - 4, 8, NUMBER_COLORS[number]);
+			// Raylib.DrawTextEx(Assets.Fonts.More15Outline.Font, numStr, .(((int32)drawPos.x) - 5, ((int32)drawPos.y) - 12), 24, 1, .Black);
 		}
 
 		void drawFlagTile(int x, int y)
@@ -1639,15 +1725,11 @@ class Game
 		void drawClosedTile(int x, int y)
 		{
 			let type = m_State.TileType;
+			let closedTileSize = 18;
 
-			if ((x + y) % 2 == 0)
-			{
-				Raylib.DrawTextureRec(Assets.Textures.Tiles.Texture, .(0, 18 * type, 18, 18), .(x * (17) - 1, y * 17 - 1), Color.White);
-			}
-			else
-			{
-				Raylib.DrawTextureRec(Assets.Textures.Tiles.Texture, .(18, 18 * type, 18, 18), .(x * (17) - 1, y * 17 - 1), Color.White);
-			}
+			let tileColor = ((x + y) % 2 == 0) ? TILE_COLOR_0 : TILE_COLOR_1;
+
+			Raylib.DrawTextureRec(Assets.Textures.Tiles.Texture, .(0, closedTileSize * type, closedTileSize, closedTileSize), .(x * (closedTileSize - 1) - TILE_SPACING, y * (closedTileSize - 1) - TILE_SPACING), tileColor);
 		}
 
 		void drawCrossedOutTile(int x, int y)

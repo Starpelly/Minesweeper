@@ -30,23 +30,21 @@ class Particle
 
 class OpenedTileParticle : Particle
 {
-	public Vector2 Position;
-	public float Scale = 1.0f;
-	public float Rotation = 0.0f;
-	public float AngleOffset = 0.0f;
+	private Vector2 m_Position;
+	private float m_Scale = 1.0f;
+	private float m_Angle = 0.0f;
+	private float m_AngleOffset = 0.0f;
 
-	private uint m_TileType = 0;
-	private int m_GraphicIndex = 0;
+	private Color m_TileColor;
 
 	private Vector2 m_Velocity = .Zero;
 	private float gravity = 3.1f;
 	private float m_Opacity = 1.0f;
 
-	public this(Vector2 position, uint type, int graphicIndex)
+	public this(Vector2 position, Color color)
 	{
-		Position = position;
-		m_TileType = type;
-		m_GraphicIndex = graphicIndex;
+		m_Position = position;
+		m_TileColor = color;
 
 		gravity = Math.RandomFloat32(10.5f, 16.3f) * 64;
 		m_Velocity.x = (Game.Random.Next(0, 2) == 0 ? -1 : 1) * Math.RandomFloat32(48, 85);
@@ -57,43 +55,36 @@ class OpenedTileParticle : Particle
 	{
 		m_Velocity += .(0, gravity) * Raylib.GetFrameTime();
 
-		Position += m_Velocity * Raylib.GetFrameTime();
+		m_Position += m_Velocity * Raylib.GetFrameTime();
 
 		// Rotation = Math.Atan2(m_Velocity.y, m_Velocity.x) * (180.0f / Math.PI_f);
-		AngleOffset += (m_Velocity.x * 10) * Raylib.GetFrameTime();
+		m_AngleOffset += (m_Velocity.x * 10) * Raylib.GetFrameTime();
 
-		Scale -= 1.3f * Raylib.GetFrameTime();
+		m_Scale -= 1.3f * Raylib.GetFrameTime();
 
 		m_Opacity -= 1.3f * Raylib.GetFrameTime();
 
-		if (Scale < 0.0f || m_Opacity <= 0.0f)
+		if (m_Scale < 0.0f || m_Opacity <= 0.0f)
 			DestroySelf();
 	}
 
 	public override void Render()
 	{
-		let row = m_TileType;
-
-		let color = Color(255, 255, 255, (uint8)(m_Opacity * 255.0f));
+		let color = Color(m_TileColor.r, m_TileColor.g, m_TileColor.b, (uint8)(m_Opacity * 255.0f));
 		// Raylib.DrawRectanglePro(.(Position.x, Position.y + 12, 18, 18), .(9, 9), Rotation, .(0, 0, 0, 50));
-		if (m_GraphicIndex == 0)
-		{
-			Raylib.DrawTexturePro(Assets.Textures.Tiles.Texture, .(0, 18 * row, 18, 18), .(Position.x + 8, Position.y + 8, 18 * Scale, 18 * Scale), Vector2(9, 9) * Scale, Rotation + AngleOffset, color);
-		}
-		else
-		{
-			Raylib.DrawTexturePro(Assets.Textures.Tiles.Texture, .(18, 18 * row, 18, 18), .(Position.x + 8, Position.y + 8, 18 * Scale, 18 * Scale), Vector2(9, 9) * Scale, Rotation + AngleOffset, color);
-		}
+		Raylib.DrawTexturePro(Assets.Textures.Tiles.Texture, .(0, 0, 18, 18), .(m_Position.x + 8, m_Position.y + 8, 18 * m_Scale, 18 * m_Scale), Vector2(9, 9) * m_Scale, m_Angle + m_AngleOffset, color);
 	}
 }
 
 class ExplosionFlashParticle : Particle
 {
 	private float m_Time;
+	private float m_StartAlpha = 0.0f;
 
-	public this()
+	public this(float startAlpha)
 	{
 		m_Time = 0.7f;
+		m_StartAlpha = startAlpha;
 	}
 
 	public override void Update()
@@ -105,7 +96,7 @@ class ExplosionFlashParticle : Particle
 
 	public override void Render()
 	{
-		Raylib.DrawRectangle(-10000, -10000, 100000, 100000, .(255, 0, 0, (uint8)(m_Time * 255.0f)));
+		Raylib.DrawRectangle(-10000, -10000, 100000, 100000, .(255, 0, 0, (uint8)(m_Time * m_StartAlpha)));
 	}
 }
 
