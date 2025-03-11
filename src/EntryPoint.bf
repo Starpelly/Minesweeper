@@ -69,7 +69,6 @@ class EntryPoint
 		}
 #endif
 #endif
-
 		InitAssets();
 		s_Game = scope Game();
 
@@ -144,22 +143,21 @@ class EntryPoint
 		if (VIEWPORT_USE_RENDERTEXTURE)
 		{
 			Raylib.EndTextureMode();
+
+			Raylib.BeginShaderMode(Assets.Shaders.Grayscale.Shader);
+			Raylib.DrawTexturePro(s_ScreenTexture.texture,
+				.(0, 0, s_ScreenTexture.texture.width, -s_ScreenTexture.texture.height),
+				.(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y),
+				.(0, 0),
+				0,
+				Raylib.WHITE);
+			Raylib.EndShaderMode();
 		}
 		else
 		{
 			Raylib.EndScissorMode();
 			Rlgl.rlViewport(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
 		}
-
-		// Draw screen
-		/*
-		Raylib.DrawTexturePro(s_ScreenTexture.texture,
-			.(0, 0, s_ScreenTexture.texture.width, -s_ScreenTexture.texture.height),
-			.(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y),
-			.(0, 0),
-			0,
-			Raylib.WHITE);
-		*/
 #endif
 
 		Raylib.EndDrawing();

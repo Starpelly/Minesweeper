@@ -542,6 +542,7 @@ class Game
 		m_State.ComboTimer.Stop();
 		m_State.MineTimer.Stop();
 
+		Raylib.SetSoundVolume(Assets.Sounds.Win.Sound, 0.5f);
 		Raylib.PlaySound(Assets.Sounds.Win.Sound);
 
 		// Hack for all tiles in the win state
@@ -734,6 +735,10 @@ class Game
 			if (m_State.Numbers[x, y] > 0)
 			{
 				ChordMines(x, y);
+			}
+			else
+			{
+				Raylib.PlaySound(Assets.Sounds.Tap.Sound);
 			}
 		}
 	}
@@ -1609,6 +1614,8 @@ class Game
 		// Raylib.DrawCircleV(GetMousePosition(), 4, .Red);
 	}
 
+	private Vector2 m_BGOffset;
+
 	private void renderBackground()
 	{
 		let bgWidth = SCREEN_WIDTH;
@@ -1620,7 +1627,11 @@ class Game
 		var checkerOffsetX = (float)Raylib.GetTime() * 10;
 		var checkerOffsetY = (float)Raylib.GetTime() * 0;
 
-		// checkerOffsetX = GetMousePosition().x;
+		var newBGOffset = Vector2(GetMousePosition().x * 0.01f, GetMousePosition().y * 0.01f);
+		m_BGOffset = .(Math.Lerp(m_BGOffset.x, newBGOffset.x, Raylib.GetFrameTime() * 5.0f), Math.Lerp(m_BGOffset.y, newBGOffset.y, Raylib.GetFrameTime() * 5.0f));
+
+		checkerOffsetX += m_BGOffset.x;
+		checkerOffsetY += m_BGOffset.y;
 
 		let checkerBoardOffset = Vector2(Math.Repeat(checkerOffsetX, BG_CHECKER_SIZE * 2), Math.Repeat(checkerOffsetY, BG_CHECKER_SIZE * 2));
 		for (let y < (bgHeight / BG_CHECKER_SIZE) + 3)

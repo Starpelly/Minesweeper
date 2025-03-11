@@ -29,6 +29,11 @@ public static struct Data
 	public static struct Fonts
 	{
 	}
+
+	public static struct Shaders
+	{
+		public static String GrayscaleCode = Compiler.ReadText("assets/shaders/grayscale.fs");
+	}
 }
 
 public class AssetManager
@@ -101,6 +106,21 @@ public class AssetManager
 		}
 	}
 
+	public class Shader
+	{
+		public RaylibBeef.Shader Shader { get; private set; }
+
+		public this(String vertexCode, String fragmentCode)
+		{
+			Shader = Raylib.LoadShaderFromMemory(vertexCode, fragmentCode);
+		}
+
+		public ~this()
+		{
+			Raylib.UnloadShader(Shader);
+		}
+	}
+
 	public class Textures
 	{
 		public readonly TextureEx Flags = new .(&Data.Textures.Flags, Data.Textures.Flags.Count) ~ delete _;
@@ -127,9 +147,15 @@ public class AssetManager
 	{
 	}
 
+	public class Shaders
+	{
+		public readonly Shader Grayscale = new .(null, Data.Shaders.GrayscaleCode) ~ delete _;
+	}
+
 	public Textures Textures = new .() ~ delete _;
 	public Sounds Sounds = new .() ~ delete _;
 	public Fonts Fonts = new .() ~ delete _;
+	public Shaders Shaders = new .() ~ delete _;
 
 	public this()
 	{
