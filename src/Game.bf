@@ -7,9 +7,9 @@ namespace Minesweeper;
 
 class Game
 {
-	// -------------------
-	// Constants / Structs
-	// -------------------
+	// ---------
+	// Constants
+	// ---------
 
 	private static int32 UI_SCALE => SCREEN_WIDTH / 640;
 	private static int32 UI_SCREEN_WIDTH => BASE_SCREEN_WIDTH / UI_SCALE;
@@ -56,13 +56,9 @@ class Game
 		.(25, 25, 25, 255)
 	);
 
-	private struct Board
-	{
-		public int Width = 8;
-		public int Height = 8;
-
-		public uint Mines = 10;
-	}
+	// -----
+	// Enums
+	// -----
 
 	private enum TileState
 	{
@@ -78,6 +74,18 @@ class Game
 		Lose,
 		Win,
 		GameOver
+	}
+
+	// -----------------
+	// Structs / Classes
+	// -----------------
+	
+	private struct Board
+	{
+		public int Width = 8;
+		public int Height = 8;
+
+		public uint Mines = 10;
 	}
 
 	private class ComboTimer
@@ -161,25 +169,6 @@ class Game
 		public TileState[,] Tiles ~ delete _;
 	}
 
-	private Vector2 BOARD_SIZE => .(m_Board.Width * (TILE_SIZE + TILE_SPACING), m_Board.Height * (TILE_SIZE + TILE_SPACING));
-	private Vector2 BOARD_POS => .Zero;
-
-	private Vector2I BOARD_MOUSE_COORDS
-	{
-		get
-		{
-			let mp = Raylib.GetScreenToWorld2D(GetMousePosition(), m_Camera) - BOARD_POS;
-			var ret = mp / (TILE_SIZE + TILE_SPACING);
-
-			if (mp.x < 0)
-				ret.x -= 1;
-			if (mp.y < 0)
-				ret.y -= 1;
-
-			return ret;
-		}
-	}
-
 	private class ShakeInstance
 	{
 		public float Strength;
@@ -198,9 +187,6 @@ class Game
 		public bool IsFinished => Strength <= 0.01f;
 	}
 
-	private List<ShakeInstance> m_CamShakesList = new .() ~ DeleteContainerAndItems!(_);
-	private Vector2 m_CamShakeInfluence = .Zero;
-
 	private class Highscore
 	{
 		public float Points = 0.0f;
@@ -218,6 +204,9 @@ class Game
 	// Private variables
 	// -----------------
 
+	private List<ShakeInstance> m_CamShakesList = new .() ~ DeleteContainerAndItems!(_);
+	private Vector2 m_CamShakeInfluence = .Zero;
+
 	private Board m_Board;
 	private State m_State = new .() ~ delete _;
 
@@ -227,15 +216,6 @@ class Game
 	private float m_NewCameraZoom;
 	private Vector2 m_NewCameraTarget;
 
-	private Vector2 GetMousePosition()
-	{
-#if GAME_SCREEN_FREE
-		return Raylib.GetMousePosition();
-#else
-		return EntryPoint.MousePositionViewport;
-#endif
-	}
-
 	private List<Particle> m_ActiveParticles = new .() ~ DeleteContainerAndItems!(_);
 	private List<Particle> m_ParticlesToDelete = new .() ~ delete _;
 
@@ -244,6 +224,35 @@ class Game
 	private Highscore m_SessionHighscore = new .() ~ delete _;
 
 	private RenderTexture2D m_UIRenderTexture;
+
+	// -----------------
+	// Private accessors
+	// -----------------
+
+	private Vector2 GetBoardSize() => .(m_Board.Width * (TILE_SIZE + TILE_SPACING), m_Board.Height * (TILE_SIZE + TILE_SPACING));
+	private Vector2 GetBoardPos() => .Zero;
+
+	private Vector2I GetBoardMouseCoords()
+	{
+		let mp = Raylib.GetScreenToWorld2D(GetMousePosition(), m_Camera) - GetBoardPos();
+		var ret = mp / (TILE_SIZE + TILE_SPACING);
+
+		if (mp.x < 0)
+			ret.x -= 1;
+		if (mp.y < 0)
+			ret.y -= 1;
+
+		return ret;
+	}
+
+	private Vector2 GetMousePosition()
+	{
+#if GAME_SCREEN_FREE
+		return Raylib.GetMousePosition();
+#else
+		return EntryPoint.MousePositionViewport;
+#endif
+	}
 
 	// --------------
 	// Public methods
@@ -1128,11 +1137,11 @@ class Game
 		{
 			if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
 			{
-				LeftClickBoard(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y);
+				LeftClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
 			}
 			else if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_RIGHT))
 			{
-				RightClickBoard(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y);
+				RightClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
 			}
 
 			mixin decrementComboMult()
@@ -1291,7 +1300,7 @@ class Game
 
 	private void centerCamera()
 	{
-		m_Camera.target = .(BOARD_SIZE.x * 0.5f, BOARD_SIZE.y * 0.5f);
+		m_Camera.target = .(GetBoardSize().x * 0.5f, GetBoardSize().y * 0.5f);
 		m_Camera.offset = .(SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT * 0.5f);
 	}
 
@@ -1378,7 +1387,7 @@ class Game
 		{
 			var delta = Raylib.GetFrameTime() * 17.0f;
 			// m_Camera.target = Raymath.Vector2Lerp(m_Camera.target, m_NewCameraTarget, delta);
-			m_Camera.target = .(BOARD_SIZE.x * 0.5f, BOARD_SIZE.y * 0.5f);
+			m_Camera.target = .(GetBoardSize().x * 0.5f, GetBoardSize().y * 0.5f);
 			m_Camera.zoom = Math.Lerp(m_Camera.zoom, m_NewCameraZoom, delta);
 			m_Camera.offset = .(SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT * 0.5f);
 		}
@@ -1564,7 +1573,7 @@ class Game
 
 	private void renderBoard()
 	{
-		Rectangle boardRec = .(BOARD_POS.x, BOARD_POS.y, BOARD_SIZE.x, BOARD_SIZE.y);
+		Rectangle boardRec = .(GetBoardPos().x, GetBoardPos().y, GetBoardSize().x, GetBoardSize().y);
 
 		// Board shadow
 		Raylib.DrawRectangleRec(boardRec - Rectangle(7, -6, 0, 0), .(0, 0, 0, 40));
@@ -1579,7 +1588,7 @@ class Game
 			{
 				for (let y < m_Board.Height)
 				{
-					Raylib.DrawRectangleRec(.(BOARD_POS.x + (x * (TILE_SIZE + TILE_SPACING)), BOARD_POS.y + (y * (TILE_SIZE + TILE_SPACING)), TILE_SIZE, TILE_SIZE), .(192, 204, 216, 255));
+					Raylib.DrawRectangleRec(.(GetBoardPos().x + (x * (TILE_SIZE + TILE_SPACING)), GetBoardPos().y + (y * (TILE_SIZE + TILE_SPACING)), TILE_SIZE, TILE_SIZE), .(192, 204, 216, 255));
 				}
 			}
 		}
@@ -1590,9 +1599,9 @@ class Game
 		// Board cursor frame
 		if (m_State.State == .Game)
 		{
-			if (BOARD_MOUSE_COORDS.x >= 0 && BOARD_MOUSE_COORDS.y >= 0
-				&& BOARD_MOUSE_COORDS.x < m_Board.Width && BOARD_MOUSE_COORDS.y < m_Board.Height)
-			Raylib.DrawTexture(Assets.Textures.Frame.Texture, (int32)(BOARD_MOUSE_COORDS.x * (TILE_SIZE + TILE_SPACING) - 1), (int32)(BOARD_MOUSE_COORDS.y * (TILE_SIZE + TILE_SPACING) - 1), Color.White);
+			if (GetBoardMouseCoords().x >= 0 && GetBoardMouseCoords().y >= 0
+				&& GetBoardMouseCoords().x < m_Board.Width && GetBoardMouseCoords().y < m_Board.Height)
+			Raylib.DrawTexture(Assets.Textures.Frame.Texture, (int32)(GetBoardMouseCoords().x * (TILE_SIZE + TILE_SPACING) - 1), (int32)(GetBoardMouseCoords().y * (TILE_SIZE + TILE_SPACING) - 1), Color.White);
 		}
 
 		// Board outline
@@ -1724,14 +1733,14 @@ class Game
 		// Test
 		if (m_State.State == .Game)
 		{
-			drawRecAtTile(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y, -1, -1);
-			drawRecAtTile(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y, -1, 0);
-			drawRecAtTile(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y, 1, 0);
-			drawRecAtTile(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y, 1, -1);
-			drawRecAtTile(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y, 0, -1);
-			drawRecAtTile(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y, 0, 1);
-			drawRecAtTile(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y, -1, 1);
-			drawRecAtTile(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y, 1, 1);
+			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, -1, -1);
+			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, -1, 0);
+			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 1, 0);
+			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 1, -1);
+			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 0, -1);
+			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 0, 1);
+			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, -1, 1);
+			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 1, 1);
 		}
 	}
 }
