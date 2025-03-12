@@ -149,7 +149,7 @@ public class AssetManager
 
 	public class Shaders
 	{
-		public readonly Shader Grayscale = new .(null, Data.Shaders.GrayscaleCode) ~ delete _;
+		// public readonly Shader Grayscale = new .(null, Data.Shaders.GrayscaleCode) ~ delete _;
 	}
 
 	public Textures Textures = new .() ~ delete _;

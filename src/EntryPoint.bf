@@ -55,8 +55,10 @@ class EntryPoint
 		Raylib.InitWindow(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT, "Minesweeper+");
 		Raylib.InitAudioDevice();
 
-		SCREEN_WIDTH = Raylib.GetScreenWidth();
-		SCREEN_HEIGHT = Raylib.GetScreenHeight();
+		Raylib.SetExitKey(.KEY_NULL);
+
+		SCREEN_WIDTH = BASE_SCREEN_WIDTH;
+		SCREEN_HEIGHT = BASE_SCREEN_HEIGHT;
 
 #if !GAME_SCREEN_FREE
 #if GAME_SCREEN_CONSTANT
@@ -104,7 +106,7 @@ class EntryPoint
 			if (VIEWPORT_USE_RENDERTEXTURE)
 			{
 				Raylib.UnloadRenderTexture(s_ScreenTexture);
-				s_ScreenTexture = Raylib.LoadRenderTexture((int32)s_ViewportSize.x, (int32)s_ViewportSize.y);
+				s_ScreenTexture = Raylib.LoadRenderTexture((int32)viewportSize.x, (int32)viewportSize.y);
 			}
 
 			SCREEN_WIDTH = (int32)s_ViewportSize.x;
@@ -144,14 +146,14 @@ class EntryPoint
 		{
 			Raylib.EndTextureMode();
 
-			Raylib.BeginShaderMode(Assets.Shaders.Grayscale.Shader);
+			// Raylib.BeginShaderMode(Assets.Shaders.Grayscale.Shader);
 			Raylib.DrawTexturePro(s_ScreenTexture.texture,
 				.(0, 0, s_ScreenTexture.texture.width, -s_ScreenTexture.texture.height),
 				.(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y),
 				.(0, 0),
 				0,
 				Raylib.WHITE);
-			Raylib.EndShaderMode();
+			// Raylib.EndShaderMode();
 		}
 		else
 		{

@@ -49,6 +49,8 @@ class Game
 	private const float SECONDS_PER_MINE_MAX = 60.0f;
 	private const float SECONDS_PER_MINE_MIN = 15.0f;
 
+	private const bool NO_GUESSING = true;
+
 	private const Color[10] NUMBER_COLORS = .(
 		.(0, 0, 0, 255),
 		.(57, 90, 211, 255),
@@ -62,6 +64,10 @@ class Game
 		.(25, 25, 25, 255)
 	);
 
+	// Directions for neighbor checks (8 adjacent cells)
+	private static readonly int[] dx = new .(-1, -1, -1, 0, 0, 1, 1, 1) ~ delete _;
+	private static readonly int[] dy = new .(-1, 0, 1, -1, 1, -1, 0, 1) ~ delete _;
+
 	// -----
 	// Enums
 	// -----
@@ -70,7 +76,7 @@ class Game
 	{
 		Closed,
 		Opened,
-		Flaged,
+		Flagged,
 		NoMine,
 	}
 
@@ -243,7 +249,8 @@ class Game
 
 	private Vector2I GetBoardMouseCoords()
 	{
-		let mp = Raylib.GetScreenToWorld2D(GetMousePosition(), m_Camera) - GetBoardPos();
+		let tempCam = Camera2D(m_Camera.offset, m_Camera.target, m_Camera.rotation, m_Camera.zoom * (SCREEN_WIDTH / 1280.0f));
+		let mp = Raylib.GetScreenToWorld2D(GetMousePosition(), tempCam) - GetBoardPos();
 		var ret = mp / (TILE_SIZE + TILE_SPACING);
 
 		if (mp.x < 0)
@@ -318,7 +325,7 @@ class Game
 		let maxMinesCount = (uint)Math.Floor((newBoardWidth * newBoardHeight) * 0.3f); // 30% of the total board area
 		let newMineCount = Math.Clamp(startMineCount, startMineCount, maxMinesCount);
 
-		Console.WriteLine(scope $"Max Mine Count: {maxMinesCount}");
+		// Console.WriteLine(scope $"Max Mine Count: {maxMinesCount}");
 
 		let newBoard = Board()
 		{
@@ -381,6 +388,21 @@ class Game
 		    return Math.Abs(x - safeX) <= 1 && Math.Abs(y - safeY) <= 1;
 		}
 
+		for (var mine in ref m_State.Mines)
+		{
+			mine = false;
+		}
+		for (var tile in ref m_State.Tiles)
+		{
+			tile = .Closed;
+		}
+		for (var number in ref m_State.Numbers)
+		{
+			number = 0;
+		}
+		m_State.MineCount = 0;
+		m_State.FlagCount = 0;
+
 		var minesToCreate = m_Board.Mines;
 		while (minesToCreate > 0)
 		{
@@ -418,7 +440,7 @@ class Game
 			}
 		}
 
-		Console.WriteLine(totalNumbers);
+		// Console.WriteLine(totalNumbers);
 	}
 
 	public void Open(int x, int y, bool wasWaitingForFirstClick = false)
@@ -432,17 +454,6 @@ class Game
 		bool wasWaitingFC = m_State.WaitingForFirstClick;
 		if (wasWaitingForFirstClick)
 			wasWaitingFC = true;
-		if (m_State.WaitingForFirstClick)
-		{
-			GenerateMines(x, y);
-
-			m_State.IsPlaying = true;
-			m_State.WaitingForFirstClick = false;
-
-			m_State.SessionTimer.Start();
-			m_State.ComboTimer.Start();
-			m_State.MineTimer.Start();
-		}
 
 		if (m_State.Tiles[x, y] == .Closed)
 		{
@@ -479,14 +490,14 @@ class Game
 			{
 				for (let by < m_Board.Height)
 				{
-					if (m_State.Mines[bx, by] && m_State.Tiles[bx, by] != .Flaged)
+					if (m_State.Mines[bx, by] && m_State.Tiles[bx, by] != .Flagged)
 					{
 						m_State.Tiles[bx, by] = .Opened;
 						// m_MinesToExplode.Add((bx, by));
 					}
 					else
 					{
-						if (!m_State.Mines[bx, by] && m_State.Tiles[bx, by] == .Flaged)
+						if (!m_State.Mines[bx, by] && m_State.Tiles[bx, by] == .Flagged)
 						{
 							m_State.Tiles[bx, by] = .NoMine;
 						}
@@ -587,7 +598,7 @@ class Game
 			{
 				if (k >= 0 && l >= 0 && k < m_Board.Width && l < m_Board.Height)
 				{
-					if (m_State.Tiles[k, l] == .Flaged)
+					if (m_State.Tiles[k, l] == .Flagged)
 					{
 						foundFlagCount++;
 					}
@@ -636,7 +647,7 @@ class Game
 			{
 				if (k >= 0 && l >= 0 && k < m_Board.Width && l < m_Board.Height)
 				{
-					if (m_State.Tiles[k, l] == .Closed || m_State.Tiles[k, l] == .Flaged)
+					if (m_State.Tiles[k, l] == .Closed || m_State.Tiles[k, l] == .Flagged)
 					{
 						foundClosedCells.Add((k, l));
 					}
@@ -667,23 +678,23 @@ class Game
 			return;
 		}
 
-		let lastFlagState = m_State.Tiles[x, y] == .Flaged;
+		let lastFlagState = m_State.Tiles[x, y] == .Flagged;
 
 		if (allowUnflag)
 		{
-			m_State.Tiles[x, y] = m_State.Tiles[x, y] == .Flaged ? 0 : .Flaged;
+			m_State.Tiles[x, y] = m_State.Tiles[x, y] == .Flagged ? 0 : .Flagged;
 		}
 		else
 		{
-			m_State.Tiles[x, y] = .Flaged;
+			m_State.Tiles[x, y] = .Flagged;
 
-			if (lastFlagState && m_State.Tiles[x, y] == .Flaged) return;
+			if (lastFlagState && m_State.Tiles[x, y] == .Flagged) return;
 		}
 
-		if (m_State.Tiles[x, y] == .Flaged != lastFlagState)
+		if (m_State.Tiles[x, y] == .Flagged != lastFlagState)
 			Raylib.PlaySound(Assets.Sounds.Flag.Sound);
 
-		if (m_State.Tiles[x, y] == .Flaged)
+		if (m_State.Tiles[x, y] == .Flagged)
 		{
 			m_State.FlagCount++;
 		}
@@ -700,6 +711,77 @@ class Game
 		if (x < 0 || y < 0 || x >= m_Board.Width || y >= m_Board.Height)
 		{
 			return;
+		}
+
+		if (m_State.WaitingForFirstClick)
+		{
+			m_State.IsPlaying = true;
+			m_State.WaitingForFirstClick = false;
+
+			if (NO_GUESSING)
+			{
+				bool Solve()
+				{
+					SOLVER_revealCell(x, y);
+	
+					while (SOLVER_makeDeterministicMove())
+					{
+					}
+	
+					// Check if board is fully solved
+					bool solved = true;
+					for (int x = 0; x < m_Board.Width; x++)
+					{
+						for (int y = 0; y < m_Board.Height; y++)
+						{
+						    if (m_State.Tiles[x, y] == .Closed && !m_State.Mines[x, y])
+							{
+						        solved = false;
+						        break;
+						    }
+						}
+						if (!solved) break;
+					}
+	
+					if (solved)
+					{
+						Console.ForegroundColor = .Green;
+						Console.WriteLine("Game solved using a no-guess strategy!");
+					}
+					else
+					{
+						Console.ForegroundColor = .Red;
+						Console.WriteLine("Unsolvable without guessing! Algorithm got stuck...");
+					}
+					Console.ResetColor();
+	
+					return solved;
+				}
+	
+				bool solved = false;
+				while (!solved)
+				{
+					GenerateMines(x, y);
+					solved = Solve();
+				}
+	
+				// Hide all tiles again
+				for (var tile in ref m_State.Tiles)
+				{
+					tile = .Closed;
+				}
+			}
+			else
+			{
+				if (m_State.WaitingForFirstClick)
+				{
+					GenerateMines(x, y);
+				}
+			}
+
+			m_State.SessionTimer.Start();
+			m_State.ComboTimer.Start();
+			m_State.MineTimer.Start();
 		}
 
 		if (m_State.Tiles[x, y] == .Closed)
@@ -726,7 +808,7 @@ class Game
 			return;
 		}
 
-		if (m_State.Tiles[x, y] == .Closed || m_State.Tiles[x, y] == .Flaged)
+		if (m_State.Tiles[x, y] == .Closed || m_State.Tiles[x, y] == .Flagged)
 		{
 			Flag(x, y);
 		}
@@ -759,7 +841,7 @@ class Game
 						if (m_State.Tiles[k, l] == .Closed)
 							return false;
 
-						if (/*m_State.Mines[k, l] == true &&*/ m_State.Tiles[k, l] == .Flaged)
+						if (/*m_State.Mines[k, l] == true &&*/ m_State.Tiles[k, l] == .Flagged)
 						{
 							counted++;
 						}
@@ -1104,7 +1186,7 @@ class Game
 			m_TargetCameraZoom = 0.25f;
 		}
 
-		m_Camera.zoom = Math.Lerp(m_Camera.zoom, (m_TargetCameraZoom * BASE_CAMERA_ZOOM) * (SCREEN_WIDTH / 1280.0f), Raylib.GetFrameTime() * 18.0f);
+		m_Camera.zoom = Math.Lerp(m_Camera.zoom, (m_TargetCameraZoom * BASE_CAMERA_ZOOM), Raylib.GetFrameTime() * 18.0f);
 #endif
 
 		// Update timers
@@ -1306,7 +1388,7 @@ class Game
 				shakeInf.y = 0.0f;
 			*/
 
-			let drawCamera = Camera2D(m_Camera.offset, m_Camera.target + shakeInf, m_Camera.rotation, m_Camera.zoom);
+			let drawCamera = Camera2D(m_Camera.offset, m_Camera.target + shakeInf, m_Camera.rotation, m_Camera.zoom * (SCREEN_WIDTH / 1280.0f));
 			Raylib.BeginMode2D(drawCamera);
 			{
 				renderBoard();
@@ -1778,7 +1860,7 @@ class Game
 				{
 					drawClosedTile(x, y);
 				}
-				else if (m_State.Tiles[x, y] == .Flaged)
+				else if (m_State.Tiles[x, y] == .Flagged)
 				{
 					drawClosedTile(x, y);
 					drawFlagTile(x, y);
@@ -1826,14 +1908,10 @@ class Game
 		// Test
 		if (m_State.State == .Game)
 		{
-			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, -1, -1);
-			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, -1, 0);
-			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 1, 0);
-			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 1, -1);
-			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 0, -1);
-			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 0, 1);
-			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, -1, 1);
-			drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, 1, 1);
+			for (int d < 8)
+			{
+				drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, dx[d], dy[d]);
+			}
 		}
 	}
 }
