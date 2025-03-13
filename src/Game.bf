@@ -65,9 +65,13 @@ class Game : Scene
 		.(25, 25, 25, 255)
 	);
 
+	// UI Transitions
+	private const float UI_TITLE_TO_GAME_FADE_LENGTH = 0.35f;
+	private const float UI_GAME_SLIDE_IN_LENGTH = 0.55f;
+
 	// Directions for neighbor checks (8 adjacent cells)
-	private static readonly int[] dx = new .(-1, -1, -1, 0, 0, 1, 1, 1) ~ delete _;
-	private static readonly int[] dy = new .(-1, 0, 1, -1, 1, -1, 0, 1) ~ delete _;
+	private static readonly int[] m_TileDX = new .(-1, -1, -1, 0, 0, 1, 1, 1) ~ delete _;
+	private static readonly int[] m_TileDY = new .(-1, 0, 1, -1, 1, -1, 0, 1) ~ delete _;
 
 	// -----
 	// Enums
@@ -87,6 +91,19 @@ class Game : Scene
 		Lose,
 		Win,
 		GameOver
+	}
+
+	private enum DrawTextSize
+	{
+		Big,
+		Small
+	}
+
+	private enum DrawTextType
+	{
+		Outline,
+		NoOutline,
+		Shadow
 	}
 
 	// -----------------
@@ -242,6 +259,14 @@ class Game : Scene
 	private float m_MinesToExplodeTimer = 0.0f;
 
 	private float m_SceneTime = 0.0f;
+
+	private enum UIState
+	{
+		Title,
+		Game
+	}
+
+	private UIState m_UIState = .Title;
 
 	// -----------------
 	// Private accessors
@@ -588,8 +613,6 @@ class Game : Scene
 			return;
 		}
 
-		Console.WriteLine("Chord");
-
 		var expectedFlagCount = m_State.Numbers[x, y];
 
 		// Get number of flags and collect empty cells
@@ -622,7 +645,7 @@ class Game : Scene
 			return;
 		}
 
-		Raylib.PlaySound(Assets.Sounds.ClearArea.Sound);
+		// Raylib.PlaySound(Assets.Sounds.ClearArea.Sound);
 		for (let cell in foundClosedCells)
 		{
 			Open(cell.0, cell.1);
@@ -973,406 +996,435 @@ class Game : Scene
 	// ------
 
 	private Vector2I m_LastHoveringTile = .(0, 0);
+	private float m_TimeSinceUIStateChange = 0.0f;
+	private bool m_ChangingUIState = false;
 
 	public override void Update()
 	{
 		m_SceneTime += Raylib.GetFrameTime();
+		m_TimeSinceUIStateChange += Raylib.GetFrameTime();
 
-		m_MinesToExplodeTimer += Raylib.GetFrameTime();
-		if (m_MinesToExplodeTimer >= 0.08f && m_MinesToExplode.Count > 0)
+		if (m_UIState == .Title)
 		{
-			let mine = m_MinesToExplode[0];
-			m_State.Tiles[mine.0, mine.1] = .Opened;
-
-			OnMineExplode(false);
-
-			m_MinesToExplode.RemoveAt(0);
-			m_MinesToExplodeTimer = 0.0f;
-		}
-
-#if DEBUG
-		// Debug: Restart game
-		if (Raylib.IsKeyPressed(.KEY_R))
-		{
-			RestartGame();
-		}
-
-		// Debug: Add 1k points
-		if (Raylib.IsKeyPressed(.KEY_P))
-		{
-			AddPoints(1000);
-		}
-
-		// Debug: Clear current board
-		if (Raylib.IsKeyPressed(.KEY_C))
-		{
-			for (let x < m_Board.Width)
+			if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT) && !m_ChangingUIState)
 			{
-				for (let y < m_Board.Height)
+				m_TimeSinceUIStateChange = 0.0f;
+				m_ChangingUIState = true;
+			}
+
+			if (m_ChangingUIState)
+			{
+				if (m_TimeSinceUIStateChange >= UI_TITLE_TO_GAME_FADE_LENGTH)
 				{
-					if (!m_State.Mines[x, y])
-					{
-						Open(x, y);
-					}
+					m_TimeSinceUIStateChange = 0.0f;
+					m_UIState = .Game;
 				}
 			}
 		}
+		else if (m_UIState == .Game)
+		{
+			if (m_TimeSinceUIStateChange >= UI_GAME_SLIDE_IN_LENGTH)
+			{
+				m_ChangingUIState = false;
+			}
 
-		// Debug: Increase board height
-		if (Raylib.IsKeyPressed(.KEY_UP))
-		{
-			let b = Board()
+			m_MinesToExplodeTimer += Raylib.GetFrameTime();
+			if (m_MinesToExplodeTimer >= 0.08f && m_MinesToExplode.Count > 0)
 			{
-				Width = m_Board.Width,
-				Height = m_Board.Height + 1,
-				Mines = m_Board.Mines
-			};
-			Remake(b, false);
-		}
-		// Debug: Decrease board height
-		if (Raylib.IsKeyPressed(.KEY_DOWN))
-		{
-			let b = Board()
-			{
-				Width = m_Board.Width,
-				Height = m_Board.Height - 1,
-				Mines = m_Board.Mines
-			};
-			Remake(b, false);
-		}
+				let mine = m_MinesToExplode[0];
+				m_State.Tiles[mine.0, mine.1] = .Opened;
 
-		// Debug: Increase board width
-		if (Raylib.IsKeyPressed(.KEY_LEFT))
-		{
-			let b = Board()
+				OnMineExplode(false);
+
+				m_MinesToExplode.RemoveAt(0);
+				m_MinesToExplodeTimer = 0.0f;
+			}
+
+#if DEBUG
+			// Debug: Restart game
+			if (Raylib.IsKeyPressed(.KEY_R))
 			{
-				Width = m_Board.Width - 1,
-				Height = m_Board.Height,
-				Mines = m_Board.Mines
-			};
-			Remake(b, false);
-		}
-		// Decrease board height
-		if (Raylib.IsKeyPressed(.KEY_RIGHT))
-		{
-			let b = Board()
+				RestartGame();
+			}
+
+			// Debug: Add 1k points
+			if (Raylib.IsKeyPressed(.KEY_P))
 			{
-				Width = m_Board.Width + 1,
-				Height = m_Board.Height,
-				Mines = m_Board.Mines
-			};
-			Remake(b, false);
-		}
+				AddPoints(1000);
+			}
+
+			// Debug: Clear current board
+			if (Raylib.IsKeyPressed(.KEY_C))
+			{
+				for (let x < m_Board.Width)
+				{
+					for (let y < m_Board.Height)
+					{
+						if (!m_State.Mines[x, y])
+						{
+							Open(x, y);
+						}
+					}
+				}
+			}
+
+			// Debug: Increase board height
+			if (Raylib.IsKeyPressed(.KEY_UP))
+			{
+				let b = Board()
+				{
+					Width = m_Board.Width,
+					Height = m_Board.Height + 1,
+					Mines = m_Board.Mines
+				};
+				Remake(b, false);
+			}
+			// Debug: Decrease board height
+			if (Raylib.IsKeyPressed(.KEY_DOWN))
+			{
+				let b = Board()
+				{
+					Width = m_Board.Width,
+					Height = m_Board.Height - 1,
+					Mines = m_Board.Mines
+				};
+				Remake(b, false);
+			}
+
+			// Debug: Increase board width
+			if (Raylib.IsKeyPressed(.KEY_LEFT))
+			{
+				let b = Board()
+				{
+					Width = m_Board.Width - 1,
+					Height = m_Board.Height,
+					Mines = m_Board.Mines
+				};
+				Remake(b, false);
+			}
+			// Decrease board height
+			if (Raylib.IsKeyPressed(.KEY_RIGHT))
+			{
+				let b = Board()
+				{
+					Width = m_Board.Width + 1,
+					Height = m_Board.Height,
+					Mines = m_Board.Mines
+				};
+				Remake(b, false);
+			}
 #endif
 
 #if GAME_SCREEN_FREE
-		let baseZoom = 6.0f;
-		let baseBoardSize = GetBoardSize() * baseZoom;
+			let baseZoom = 6.0f;
+			let baseBoardSize = GetBoardSize() * baseZoom;
 
-		// Camera zoom
-		if (SCREEN_WIDTH < (baseBoardSize.x))
-		{
-			// m_Camera.zoom = baseZoom - ((baseBoardSize.x - SCREEN_WIDTH) / baseZoom);
-			let norm = Math.Normalize(SCREEN_WIDTH, 0, baseBoardSize.x);
-			let lerp = Math.Lerp(0, baseZoom, norm);
-			m_Camera.zoom = lerp;
-		}
-		else
-		{
-			m_Camera.zoom = baseZoom;
-		}
-		Console.WriteLine(EntryPoint.ViewportScale);
-		/*
-		if (m_Board.Height > 8 || m_State.NextColumnCount > 16)
-		{
-			m_Camera.zoom = 1f;
-		}
-		*/
-#elif false
-		let baseZoom = 4.0f;
-
-		/*
-		if (baseBoardSize.x >= 1088.0f)
-		{
+			// Camera zoom
+			if (SCREEN_WIDTH < (baseBoardSize.x))
 			{
-				let norm = Math.Normalize(SCREEN_WIDTH - 192, 0, baseBoardSize.x);
-				let lerp = Math.Lerp(0, 1, norm);
-				lerpVec.x = lerp;
-			}
-
-
-			if (baseBoardSize.y >= 884.0f)
-			{
-				let norm = Math.Normalize(SCREEN_HEIGHT - 182, 0, baseBoardSize.y);
-				let lerp = Math.Lerp(0, 1, norm);
-				lerpVec.x = lerp;
+				// m_Camera.zoom = baseZoom - ((baseBoardSize.x - SCREEN_WIDTH) / baseZoom);
+				let norm = Math.Normalize(SCREEN_WIDTH, 0, baseBoardSize.x);
+				let lerp = Math.Lerp(0, baseZoom, norm);
+				m_Camera.zoom = lerp;
 			}
 			else
 			{
-
+				m_Camera.zoom = baseZoom;
 			}
-
-			Console.WriteLine(baseBoardSize.y);
-		}
-		*/
-
-		var newZoomMult = 1.0f;
-		while (true)
-		{
-			let refBoardSize = BOARD_SIZE * newZoomMult;
-
+			Console.WriteLine(EntryPoint.ViewportScale);
 			/*
-			if (refBoardSize.x >= (272.0f / newZoomMult))
+			if (m_Board.Height > 8 || m_State.NextColumnCount > 16)
 			{
-				let norm = Math.Normalize(refBoardSize.x, 0, SCREEN_WIDTH - 192, true);
-				let lerp = Math.Lerp(1, 0, norm);
-				newZoomMult = lerp;
-
-				if (newZoomMult == 1.0f)
-					break;
-
-				continue;
+				m_Camera.zoom = 1f;
 			}
 			*/
+#elif false
+			let baseZoom = 4.0f;
 
-			if (refBoardSize.y > (136.0f / newZoomMult))
-			{
-				Console.WriteLine(refBoardSize.y);
-				let norm = Math.Normalize(refBoardSize.y, 0, SCREEN_HEIGHT - 182, true);
-				let lerp = Math.Lerp(1, 0, norm);
-				newZoomMult = lerp;
-
-				if (newZoomMult == 1.0f)
-					break;
-
-				continue;
-			}
-
-			break;
-		}
-		m_Camera.zoom = newZoomMult * baseZoom;
-
-		/*
-		if (baseBoardSize.y >= 544.0f)
-		{
-			let norm = Math.Normalize(SCREEN_HEIGHT - 182, 0, baseBoardSize.y);
-			let lerp = Math.Lerp(0, 1, norm);
-			lerpVec.y = lerp;
-		}
-		*/
-
-		// m_Camera.zoom = (lerpVec.x / lerpVec.y) * baseZoom;
-
-#else
-		m_TargetCameraZoom = 1.0f;
-
-		if (m_Board.Width > 16 || m_Board.Height > 8)
-		{
-			m_TargetCameraZoom = 0.75f;
-		}
-		if (m_Board.Width > 21 || m_Board.Height > 10)
-		{
-			m_TargetCameraZoom = 0.625f;
-		}
-		if (m_Board.Width > 25 || m_Board.Height > 12)
-		{
-			m_TargetCameraZoom = 0.5f;
-		}
-		if (m_Board.Width > 31 || m_Board.Height > 15)
-		{
-			m_TargetCameraZoom = 0.438f;
-		}
-		if (m_Board.Width > 36 || m_Board.Height > 18)
-		{
-			m_TargetCameraZoom = 0.375f;
-		}
-		if (m_Board.Width > 42 || m_Board.Height > 22)
-		{
-			m_TargetCameraZoom = 0.25f;
-		}
-
-		m_Camera.zoom = Math.Lerp(m_Camera.zoom, (m_TargetCameraZoom * BASE_CAMERA_ZOOM), Raylib.GetFrameTime() * 18.0f);
-#endif
-
-		// Update timers
-		{
-			m_State.ComboTimer.Update();
-		}
-
-		for (let particle in ref m_ParticlesToDelete)
-		{
-			m_ActiveParticles.Remove(particle);
-			delete particle;
-		}
-		m_ParticlesToDelete.Clear();
-
-		for (let particle in ref m_ActiveParticles)
-		{
-			particle.Update();
-		}
-
-		if (MouseHoveringBoard() && GetBoardMouseCoords() != m_LastHoveringTile && m_State.State == .Game)
-		{
 			/*
-			Raylib.StopSound(Assets.Sounds.Hover.Sound);
-			Raylib.SetSoundVolume(Assets.Sounds.Hover.Sound, 0.25f);
-			Raylib.PlaySound(Assets.Sounds.Hover.Sound);
-			*/
-		}
-		m_LastHoveringTile = GetBoardMouseCoords();
-
-		// Camera manipulation
-		// updateCameraControl();
-		centerCamera();
-
-		// Update camera shake
-		{
-			m_CamShakeInfluence = .Zero;
-
-			var shakesToRemove = scope List<ShakeInstance>();
-			for (let shake in ref m_CamShakesList)
+			if (baseBoardSize.x >= 1088.0f)
 			{
-				if (shake.IsFinished)
-					shakesToRemove.Add(shake);
-			}
-			for (let rm in ref shakesToRemove)
-			{
-				delete rm;
-				m_CamShakesList.Remove(rm);
-			}
-			shakesToRemove.Clear();
-
-			for (let shake in ref m_CamShakesList)
-			{
-				shake.Time += Raylib.GetFrameTime() * shake.Speed;
-				float decayFactor = Math.Exp(-shake.Decay * shake.Time);
-				float shakeStrength = shake.Strength * decayFactor;
-
-				m_CamShakeInfluence += .(Math.RandomFloat32(-shakeStrength, shakeStrength), Math.RandomFloat32(-shakeStrength, shakeStrength));
-			}
-		}
-#if false
-		if ((Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT) && Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_RIGHT))
-			|| (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_RIGHT) && Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT)))
-		{
-			Chord(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y);
-		}
-		else
-		{
-			if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
-			{
-				Open(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y);
-			}
-			else if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_RIGHT))
-			{
-				Flag(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y);
-			}
-		}
-
-#else
-#endif
-
-		// Update min mines
-		{
-			if (m_State.MineTimer.Elapsed.TotalSeconds >= m_State.SecondsToNewMine)
-			{
-				m_State.StartMineAdd++;
-				m_State.MineTimer.Restart();
-			}
-		}
-
-		// Update combo timer
-		if (m_State.State == .Game)
-		{
-			if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
-			{
-				LeftClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
-			}
-			else if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_RIGHT))
-			{
-				RightClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
-			}
-
-			mixin decrementComboMult()
-			{
-				m_State.ComboMult -= 1;
-				m_State.ComboIncrementor = 0;
-
-				m_State.ComboMult = Math.Max(1, m_State.ComboMult);
-			}
-
-			if (m_State.Points >= m_SessionHighscore.Points)
-			{
-				m_SessionHighscore.BestTimeTimer.CopyFrom(m_State.SessionTimer);
-			}
-
-			if (m_State.ComboTimer.ElapsedSeconds >= m_State.MaxComboTimerTime)
-			{
-				if (m_State.DecrementingCombo)
 				{
-					if (m_State.ComboMult - 1 > 0)
-					{
-						m_State.ComboTimer.Restart();
-						decrementComboMult!();
-					}
+					let norm = Math.Normalize(SCREEN_WIDTH - 192, 0, baseBoardSize.x);
+					let lerp = Math.Lerp(0, 1, norm);
+					lerpVec.x = lerp;
+				}
+
+
+				if (baseBoardSize.y >= 884.0f)
+				{
+					let norm = Math.Normalize(SCREEN_HEIGHT - 182, 0, baseBoardSize.y);
+					let lerp = Math.Lerp(0, 1, norm);
+					lerpVec.x = lerp;
 				}
 				else
 				{
-					m_State.ComboTimer.Restart();
-					m_State.DecrementingCombo = true;
-					m_State.MaxComboTimerTime = SECONDS_PER_COMBO_DECREMENTING;
 
-					decrementComboMult!();
+				}
+
+				Console.WriteLine(baseBoardSize.y);
+			}
+			*/
+
+			var newZoomMult = 1.0f;
+			while (true)
+			{
+				let refBoardSize = BOARD_SIZE * newZoomMult;
+
+				/*
+				if (refBoardSize.x >= (272.0f / newZoomMult))
+				{
+					let norm = Math.Normalize(refBoardSize.x, 0, SCREEN_WIDTH - 192, true);
+					let lerp = Math.Lerp(1, 0, norm);
+					newZoomMult = lerp;
+
+					if (newZoomMult == 1.0f)
+						break;
+
+					continue;
+				}
+				*/
+
+				if (refBoardSize.y > (136.0f / newZoomMult))
+				{
+					Console.WriteLine(refBoardSize.y);
+					let norm = Math.Normalize(refBoardSize.y, 0, SCREEN_HEIGHT - 182, true);
+					let lerp = Math.Lerp(1, 0, norm);
+					newZoomMult = lerp;
+
+					if (newZoomMult == 1.0f)
+						break;
+
+					continue;
+				}
+
+				break;
+			}
+			m_Camera.zoom = newZoomMult * baseZoom;
+
+			/*
+			if (baseBoardSize.y >= 544.0f)
+			{
+				let norm = Math.Normalize(SCREEN_HEIGHT - 182, 0, baseBoardSize.y);
+				let lerp = Math.Lerp(0, 1, norm);
+				lerpVec.y = lerp;
+			}
+			*/
+
+			// m_Camera.zoom = (lerpVec.x / lerpVec.y) * baseZoom;
+
+#else
+			m_TargetCameraZoom = 1.0f;
+
+			if (m_Board.Width > 15 || m_Board.Height > 8)
+			{
+				m_TargetCameraZoom = 0.75f;
+			}
+			if (m_Board.Width > 21 || m_Board.Height > 10)
+			{
+				m_TargetCameraZoom = 0.625f;
+			}
+			if (m_Board.Width > 25 || m_Board.Height > 12)
+			{
+				m_TargetCameraZoom = 0.5f;
+			}
+			if (m_Board.Width > 31 || m_Board.Height > 15)
+			{
+				m_TargetCameraZoom = 0.438f;
+			}
+			if (m_Board.Width > 36 || m_Board.Height > 18)
+			{
+				m_TargetCameraZoom = 0.375f;
+			}
+			if (m_Board.Width > 42 || m_Board.Height > 21)
+			{
+				m_TargetCameraZoom = 0.25f;
+			}
+
+			m_Camera.zoom = Math.Lerp(m_Camera.zoom, (m_TargetCameraZoom * BASE_CAMERA_ZOOM), Raylib.GetFrameTime() * 18.0f);
+#endif
+
+			// Update timers
+			{
+				m_State.ComboTimer.Update();
+			}
+
+			for (let particle in ref m_ParticlesToDelete)
+			{
+				m_ActiveParticles.Remove(particle);
+				delete particle;
+			}
+			m_ParticlesToDelete.Clear();
+
+			for (let particle in ref m_ActiveParticles)
+			{
+				particle.Update();
+			}
+
+			if (MouseHoveringBoard() && GetBoardMouseCoords() != m_LastHoveringTile && m_State.State == .Game)
+			{
+				/*
+				Raylib.StopSound(Assets.Sounds.Hover.Sound);
+				Raylib.SetSoundVolume(Assets.Sounds.Hover.Sound, 0.25f);
+				Raylib.PlaySound(Assets.Sounds.Hover.Sound);
+				*/
+			}
+			m_LastHoveringTile = GetBoardMouseCoords();
+
+			// Camera manipulation
+			// updateCameraControl();
+			centerCamera();
+
+			// Update camera shake
+			{
+				m_CamShakeInfluence = .Zero;
+
+				var shakesToRemove = scope List<ShakeInstance>();
+				for (let shake in ref m_CamShakesList)
+				{
+					if (shake.IsFinished)
+						shakesToRemove.Add(shake);
+				}
+				for (let rm in ref shakesToRemove)
+				{
+					delete rm;
+					m_CamShakesList.Remove(rm);
+				}
+				shakesToRemove.Clear();
+
+				for (let shake in ref m_CamShakesList)
+				{
+					shake.Time += Raylib.GetFrameTime() * shake.Speed;
+					float decayFactor = Math.Exp(-shake.Decay * shake.Time);
+					float shakeStrength = shake.Strength * decayFactor;
+
+					m_CamShakeInfluence += .(Math.RandomFloat32(-shakeStrength, shakeStrength), Math.RandomFloat32(-shakeStrength, shakeStrength));
 				}
 			}
-		}
-		else if (m_State.State == .Win)
-		{
-			if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_WIN)
+#if false
+			if ((Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT) && Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_RIGHT))
+				|| (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_RIGHT) && Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT)))
 			{
-				m_State.ComboTimer.Reset();
-
-				// Go to the next stage
-				m_State.Stage++;
-
-				Console.WriteLine(m_State.Stage);
-
-				m_State.NextBoardTimer.Reset();
-
-				// m_State.TileType = (uint)Random.Next(0, 7);
-
-				MakeStage(m_State.Stage);
+				Chord(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y);
 			}
-		}
-		else if (m_State.State == .Lose)
-		{
-			if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_FAIL)
+			else
 			{
-				m_State.ComboMult = 0;
-				m_State.ComboIncrementor = 0;
-				m_State.ComboTimer.Reset();
-
-				m_State.NextBoardTimer.Reset();
-
-				// m_State.TileType = (uint)Random.Next(0, 7);
-
-				Remake(m_Board, true);
-			}
-		}
-		else if (m_State.State == .GameOver)
-		{
-			if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER)
-			{
-				if (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT))
+				if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
 				{
+					Open(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y);
+				}
+				else if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_RIGHT))
+				{
+					Flag(BOARD_MOUSE_COORDS.x, BOARD_MOUSE_COORDS.y);
+				}
+			}
+
+#else
+#endif
+
+			// Update min mines
+			if (m_UIState == .Game)
+			{
+				if (m_State.MineTimer.Elapsed.TotalSeconds >= m_State.SecondsToNewMine)
+				{
+					m_State.StartMineAdd++;
+					m_State.MineTimer.Restart();
+				}
+			}
+
+			// Update combo timer
+			if (m_State.State == .Game && m_UIState == .Game)
+			{
+				if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
+				{
+					LeftClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
+				}
+				else if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_RIGHT))
+				{
+					RightClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
+				}
+
+				mixin decrementComboMult()
+				{
+					m_State.ComboMult -= 1;
+					m_State.ComboIncrementor = 0;
+
+					m_State.ComboMult = Math.Max(1, m_State.ComboMult);
+				}
+
+				if (m_State.Points >= m_SessionHighscore.Points)
+				{
+					m_SessionHighscore.BestTimeTimer.CopyFrom(m_State.SessionTimer);
+				}
+
+				if (m_State.ComboTimer.ElapsedSeconds >= m_State.MaxComboTimerTime)
+				{
+					if (m_State.DecrementingCombo)
+					{
+						if (m_State.ComboMult - 1 > 0)
+						{
+							m_State.ComboTimer.Restart();
+							decrementComboMult!();
+						}
+					}
+					else
+					{
+						m_State.ComboTimer.Restart();
+						m_State.DecrementingCombo = true;
+						m_State.MaxComboTimerTime = SECONDS_PER_COMBO_DECREMENTING;
+
+						decrementComboMult!();
+					}
+				}
+			}
+			else if (m_State.State == .Win)
+			{
+				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_WIN)
+				{
+					m_State.ComboTimer.Reset();
+
+					// Go to the next stage
+					m_State.Stage++;
+
+					Console.WriteLine(m_State.Stage);
+
 					m_State.NextBoardTimer.Reset();
-					RestartGame();
+
+					// m_State.TileType = (uint)Random.Next(0, 7);
+
+					MakeStage(m_State.Stage);
+				}
+			}
+			else if (m_State.State == .Lose)
+			{
+				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_FAIL)
+				{
+					m_State.ComboMult = 0;
+					m_State.ComboIncrementor = 0;
+					m_State.ComboTimer.Reset();
+
+					m_State.NextBoardTimer.Reset();
+
+					// m_State.TileType = (uint)Random.Next(0, 7);
+
+					Remake(m_Board, true);
+				}
+			}
+			else if (m_State.State == .GameOver)
+			{
+				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER)
+				{
+					if (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT))
+					{
+						m_State.NextBoardTimer.Reset();
+						RestartGame();
+					}
 				}
 			}
 		}
 	}
 
-	public void RenderUI()
+	public void RenderUIToTexture()
 	{
 		Raylib.BeginTextureMode(m_UIRenderTexture);
 		Raylib.ClearBackground(.(0, 0, 0, 0));
@@ -1393,10 +1445,13 @@ class Game : Scene
 				shakeInf.y = 0.0f;
 			*/
 
-			let drawCamera = Camera2D(m_Camera.offset, m_Camera.target + shakeInf, m_Camera.rotation, m_Camera.zoom * (SCREEN_WIDTH / 1280.0f));
+			let transitionVec = m_ChangingUIState ? Vector2(0, Math.Lerp(-400, 0, GetGameTransitionEx())) : Vector2.Zero;
+
+			let drawCamera = Camera2D(m_Camera.offset, m_Camera.target + shakeInf + transitionVec, m_Camera.rotation, m_Camera.zoom * (SCREEN_WIDTH / 1280.0f));
 			Raylib.BeginMode2D(drawCamera);
 			{
-				renderBoard();
+				if (m_UIState == .Game)
+					renderBoard();
 
 				for (let particle in m_ActiveParticles)
 				{
@@ -1553,156 +1608,252 @@ class Game : Scene
 		}
 	}
 
+	private float GetTextSize(DrawTextSize size)
+	{
+		switch (size)
+		{
+		case .Big: return 24;
+		case .Small: return 12;
+		}
+	}
+
+	private void DrawText(String text, Vector2 pos, DrawTextSize size, DrawTextType type, uint8 alpha = 255)
+	{
+		let txtSize = GetTextSize(size);
+
+		if (type == .Outline)
+			Raylib.DrawTextEx(Assets.Fonts.NokiaOutline.Font, text, pos, txtSize, 0, .(Color.DarkOutline.r, Color.DarkOutline.g, Color.DarkOutline.b, alpha));
+		else if (type == .Shadow)
+			Raylib.DrawTextEx(Assets.Fonts.Nokia.Font, text, pos - .(2, -2), txtSize, 0, .(Color.Shadow.r, Color.Shadow.g, Color.Shadow.b, alpha));
+		Raylib.DrawTextEx(Assets.Fonts.Nokia.Font, text, pos, txtSize, 0, .(255, 255, 255, alpha));
+	}
+
+	private Vector2 MeasureText(String text, DrawTextSize size)
+	{
+		return Raylib.MeasureTextEx(Assets.Fonts.Nokia.Font, text, GetTextSize(size), 0);
+	}
+
+	private float GetGameTransitionEx()
+	{
+		return EasingFunctions.OutExpo(Math.Normalize(m_TimeSinceUIStateChange, 0, UI_GAME_SLIDE_IN_LENGTH, true));
+	}
+
 	private void renderUI()
 	{
-		void timeFormatted(String outStr, Stopwatch stopwatch)
+		if (m_UIState == .Title)
 		{
-			outStr.Append(scope $"{(int)stopwatch.Elapsed.TotalHours:D2}:{stopwatch.Elapsed.Minutes:D2}:{stopwatch.Elapsed.Seconds:D2}'{stopwatch.Elapsed.Milliseconds:D3}");
-		}
+			let uiCam = Camera2D(.Zero, .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2), 0, 1);
 
-		// Top left
+			Raylib.BeginMode2D(uiCam);
+			{
+				let uiAlpha = m_ChangingUIState ?
+					(uint8)Math.Lerp(255, 0, Math.Normalize(m_TimeSinceUIStateChange, 0, UI_TITLE_TO_GAME_FADE_LENGTH, true))
+					: 255;
+
+				let textureLogo = Assets.Textures.Logo.Texture;
+				Raylib.DrawTextureEx(textureLogo, .(-textureLogo.width / 2, -textureLogo.height / 2) - .(0, 80), 0, 1, .(255, 255, 255, uiAlpha));
+
+				let txt = "Click to start!";
+				let txtSize = 12 * 2;
+				let txtPos = Vector2(-Raylib.MeasureTextEx(Assets.Fonts.Nokia.Font, txt, txtSize, 0).x / 2, 80);
+				DrawText(txt, txtPos, .Big, .Outline, uiAlpha);
+			}
+			Raylib.EndMode2D();
+		}
+		else if (m_UIState == .Game)
 		{
-			void drawSideThing(String text, int32 timerWidth, int32 timerY, int32 fontSize, int32 cornerWidth, Color bgColor)
+			let uiCamY = Math.Lerp(-420, 0, GetGameTransitionEx());
+
+			let uiCam = Camera2D(.Zero, .(0, uiCamY), 0, 1);
+
+			Raylib.BeginMode2D(uiCam);
 			{
-				let textPadding = 2;
+				void timeFormatted(String outStr, Stopwatch stopwatch)
+				{
+					outStr.Append(scope $"{(int)stopwatch.Elapsed.TotalHours:D2}:{stopwatch.Elapsed.Minutes:D2}:{stopwatch.Elapsed.Seconds:D2}'{stopwatch.Elapsed.Milliseconds:D3}");
+				}
 
-				let timerHeight = fontSize + textPadding;
+				void drawAngledSideBarLeft(Vector2 position, Vector2 size, Color color)
+				{
+					let cornerWidth = size.y;
+					let triangleX = (position.x + size.x) - cornerWidth;
 
-				let timerX = 0;
+					Raylib.DrawRectangleRec(.(position.x, position.y, size.x - cornerWidth, size.y), color);
 
-				Raylib.DrawRectangleRec(.(timerX, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
+					Raylib.DrawTriangle(.(triangleX, position.y), .(triangleX, position.y + size.y), .(triangleX + cornerWidth, position.y), color);
+				}
 
-				let triangleX = (timerX + timerWidth) - cornerWidth;
-				Raylib.DrawTriangle(.(triangleX, timerY), .(triangleX, timerY + timerHeight), .(triangleX + cornerWidth, timerY), bgColor);
+				void drawAngledSideBarRight(Vector2 position, Vector2 size, Color bgColor)
+				{
+					let cornerWidth = size.y;
 
-				Raylib.DrawText(text, timerX + 4, timerY + (textPadding / 2), fontSize, .White);
+					let timerX = (int32)UI_SCREEN_WIDTH - size.x - position.x;
+
+					Raylib.DrawRectangleRec(.(timerX + cornerWidth, position.y, size.x - cornerWidth, size.y), bgColor);
+					Raylib.DrawTriangle(.(timerX, position.y), .(timerX + cornerWidth, position.y + size.y), .(timerX + cornerWidth, position.y), bgColor);
+				}
+
+				// Top left
+				{
+					void drawSideThingLeft(String text, int32 timerWidth, int32 timerY, DrawTextSize size, Color bgColor)
+					{
+						var timerY;
+						timerY -= 8;
+
+						let textPadding = 0;
+
+						let timerHeight = GetTextSize(size) + textPadding;
+
+						let timerX = 0;
+
+						drawAngledSideBarLeft(.(timerX, timerY), .(timerWidth, timerHeight), bgColor);
+						DrawText(text, .(timerX + 4, timerY + (textPadding / 2)), size, .Outline);
+					}
+
+					// Points
+					{
+						drawSideThingLeft(scope $"{m_State.Points} points", 196, 8, .Big, .Black);
+					}
+					// Total Timer
+					{
+						drawSideThingLeft(scope $"Time: {timeFormatted(.. scope .(), m_State.SessionTimer)}", 172, 32, .Small, .(25, 25, 25, 255));
+					}
+				}
+
+				// Counters
+				{
+					let barHeight = 30;
+					void drawCounter(String text, float width, Texture2D texture, Rectangle textureRegion, int32 posY, int32 iconOffsetX)
+					{
+						var posY;
+						posY -= 8;
+
+						let textOffsetX = 32 + 2;
+
+						let position = Vector2(textOffsetX, posY + 6);
+
+						// drawAngledSideBar(.(0, position.y - 6), .(width, barHeight), .(35, 35, 35, 255));
+
+						// Raylib.DrawRectangleRec(.(0, posY, 120 + 4, 32), .(25, 25, 25, 150));
+						// Raylib.DrawTexturePro(texture, textureRegion, .(0 - 2, posY + 2, 32, 32), .Zero, 0, .Shadow);
+						Raylib.DrawTexturePro(texture, textureRegion, .(iconOffsetX, posY, 32, 32), .Zero, 0, .White);
+
+						DrawText(text, .(textOffsetX, posY + 6), .Big, .Outline);
+					}
+
+					drawCounter(m_State.MineCount.ToString(.. scope .()), 156, Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), 48, 0);
+					drawCounter(((int)(m_State.MineCount - m_State.FlagCount)).ToString(.. scope .()), 126, Assets.Textures.Flags.Texture, .(0, 0, 16, 16), 48 + barHeight, -1);
+				}
+
+				// Combos UI
+				{
+					// Progress bar
+					{
+						let barY = 8;
+
+						float width = 195;
+
+						let barXPos = UI_SCREEN_WIDTH - width;
+						let barYPos = barY;
+
+						let barWidth = width;
+						let barHeight = 44 / 2;
+
+						let cornerWidth = 0;
+
+						m_ProgressBarTimer = Math.Lerp(m_ProgressBarTimer, (float)m_State.ComboTimer.ElapsedSeconds, Raylib.GetFrameTime() * 15.0f);
+
+						let barInnerPadding = 2;
+						let barInnerWidth = (int)Math.Lerp(0, width - barInnerPadding, (m_ProgressBarTimer / m_State.MaxComboTimerTime));
+
+						let triangleX = barXPos;
+						Raylib.DrawRectangleRec(.(barXPos + cornerWidth, barYPos, barWidth - cornerWidth, barHeight), .DarkOutline);
+						Raylib.DrawTriangle(.(triangleX, barYPos), .(triangleX + cornerWidth, barYPos + barHeight), .(triangleX + cornerWidth, barYPos), .DarkOutline);
+
+						// Inner
+						// let innerRec = Rectangle((barXPos + barInnerPadding) + barInnerWidth, barYPos + barInnerPadding, width - (barInnerPadding * 2) - barInnerWidth, barHeight - (barInnerPadding * 2));
+						let innerRec = Rectangle(barXPos + cornerWidth + barInnerPadding, barYPos + barInnerPadding, width - (barInnerPadding * 2) - cornerWidth, barHeight - (barInnerPadding * 2));
+						let innerColor = m_State.DecrementingCombo ? Color(125, 125, 125, 255) : Color.White;
+						Raylib.DrawRectangleGradientEx(innerRec, innerColor, innerColor, innerColor, innerColor);
+
+						Raylib.DrawRectangleRec(.(barXPos + barInnerPadding + cornerWidth, barYPos + barInnerPadding, barInnerWidth - cornerWidth, barHeight - (barInnerPadding * 2)), .DarkOutline);
+					}
+
+					// Combo Mult
+					if (m_State.ComboMult > 1)
+					{
+						let str = scope $"Combo: x{m_State.ComboMult}";
+
+						let multXPos = (int32)UI_SCREEN_WIDTH - MeasureText(str, .Big).x - 4;
+						let multYPos = 30;
+
+						// drawAngledSideBarRight(.(0, multYPos), .(194, 20 + 4), .Black);
+
+						DrawText(str, .(multXPos, multYPos), .Big, .Outline);
+					}
+				}
+
+				// Bottom right
+				{
+					void drawSideThing(String text, int32 timerWidth, int32 timerY, Color bgColor)
+					{
+						var timerY;
+						timerY += 8;
+
+						let fontSize = 10;
+						let textPadding = 2;
+
+						let timerHeight = fontSize + textPadding;
+
+						let cornerWidth = 12;
+
+						let timerX = (int32)UI_SCREEN_WIDTH - timerWidth;
+
+						// Raylib.DrawRectangleRec(.(timerX + cornerWidth, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
+						// Raylib.DrawTriangle(.(timerX, timerY), .(timerX + cornerWidth, timerY + timerHeight), .(timerX + cornerWidth, timerY), bgColor);
+
+						drawAngledSideBarRight(.(0, timerY), .(timerWidth, timerHeight), bgColor);
+
+						// Raylib.DrawText(text, timerX + 4 + cornerWidth, timerY + (textPadding / 2), fontSize, Color.White);
+						DrawText(text, .(timerX + 4 + cornerWidth, timerY + (textPadding / 2) - 1), .Small, .Outline);
+					}
+
+					let baseY = UI_SCREEN_HEIGHT + 12;
+					// Highscore
+					{
+						drawSideThing(scope $"Highscore: {m_SessionHighscore.Points} points", 172, (int32)baseY - 56, .Black);
+					}
+					// Best time
+					{
+						drawSideThing(scope $"Best time: {timeFormatted(.. scope .(), m_SessionHighscore.BestTimeTimer)}", 160, (int32)baseY - 44, .(25, 25, 25, 255));
+					}
+					// Best combo
+					{
+						drawSideThing(scope $"Best combo: {m_SessionHighscore.Combo}", 148, (int32)baseY - 32, .(35, 35, 35, 255));
+					}
+				}
+
+
+				// Lives
+				{
+					// drawAngledSideBarLeft(.(0, UI_SCREEN_HEIGHT - 32), .(170, 32), .(25, 25, 25, 255));
+
+					for (let i < MAX_LIVES)
+					{
+						int invI = Math.Abs((int)(i - MAX_LIVES)) - 1;
+						bool noHeart = invI > (int)m_State.Lives - 1;
+
+						let heartSrcRec = Rectangle(noHeart ? 11 : 0, 0, 11, 10);
+						let heartDestRec = Rectangle(6 + ((21 + -1) * invI), UI_SCREEN_HEIGHT - 26, 11 * 2, 10 * 2);
+
+						// Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec - .(2, -2, 0, 0), .Zero, 0, .Shadow);
+						Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec, .Zero, 0, .White);
+					}
+				}
 			}
-
-			// Points
-			{
-				drawSideThing(scope $"{m_State.Points} points", 196, 8, 20, 22, .Black);
-			}
-			// Total Timer
-			{
-				drawSideThing(scope $"Time: {timeFormatted(.. scope .(), m_State.SessionTimer)}", 174, 32 - 2, 10, 12, .(25, 25, 25, 255));
-			}
+			Raylib.EndMode2D();
+			// Raylib.DrawCircleV(GetMousePosition(), 4, .Red);
 		}
-
-		// Counters
-		{
-			void drawCounter(String text, Texture2D texture, Rectangle textureRegion, int32 posY)
-			{
-				// Raylib.DrawRectangleRec(.(0, posY, 120 + 4, 32), .(25, 25, 25, 150));
-				Raylib.DrawTexturePro(texture, textureRegion, .(0 - 2, posY + 2, 32, 32), .Zero, 0, .Shadow);
-				Raylib.DrawTexturePro(texture, textureRegion, .(0, posY, 32, 32), .Zero, 0, .White);
-
-				let textOffsetX = 32 + 4;
-				Raylib.DrawText(text, textOffsetX - 2, posY + 8 + 2, 20, .Shadow);
-				Raylib.DrawText(text, textOffsetX, posY + 8, 20, .White);
-			}
-
-			drawCounter(m_State.MineCount.ToString(.. scope .()), Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), 48);
-			drawCounter(((int)(m_State.MineCount - m_State.FlagCount)).ToString(.. scope .()), Assets.Textures.Flags.Texture, .(0, 0, 16, 16), 82);
-		}
-
-		// Combos UI
-		{
-			// Progress bar
-			{
-				let barY = 8;
-
-				float width = 195;
-
-				let barXPos = UI_SCREEN_WIDTH - width;
-				let barYPos = barY;
-
-				let barWidth = width;
-				let barHeight = 44 / 2;
-
-				let cornerWidth = 0;
-
-				m_ProgressBarTimer = Math.Lerp(m_ProgressBarTimer, (float)m_State.ComboTimer.ElapsedSeconds, Raylib.GetFrameTime() * 15.0f);
-
-				let barInnerPadding = 2;
-				let barInnerWidth = (int)Math.Lerp(0, width - barInnerPadding, (m_ProgressBarTimer / m_State.MaxComboTimerTime));
-
-				let triangleX = barXPos;
-				Raylib.DrawRectangleRec(.(barXPos + cornerWidth, barYPos, barWidth - cornerWidth, barHeight), .Black);
-				Raylib.DrawTriangle(.(triangleX, barYPos), .(triangleX + cornerWidth, barYPos + barHeight), .(triangleX + cornerWidth, barYPos), .Black);
-
-				// Inner
-				// let innerRec = Rectangle((barXPos + barInnerPadding) + barInnerWidth, barYPos + barInnerPadding, width - (barInnerPadding * 2) - barInnerWidth, barHeight - (barInnerPadding * 2));
-				let innerRec = Rectangle(barXPos + cornerWidth + barInnerPadding, barYPos + barInnerPadding, width - (barInnerPadding * 2) - cornerWidth, barHeight - (barInnerPadding * 2));
-				let innerColor = m_State.DecrementingCombo ? Color(125, 125, 125, 255) : Color.White;
-				Raylib.DrawRectangleGradientEx(innerRec, innerColor, innerColor, innerColor, innerColor);
-
-				Raylib.DrawRectangleRec(.(barXPos + barInnerPadding + cornerWidth, barYPos + barInnerPadding, barInnerWidth - cornerWidth, barHeight - (barInnerPadding * 2)), .Black);
-			}
-
-			// Combo Mult
-			if (m_State.ComboMult > 1)
-			{
-				let str = scope $"Combo: x{m_State.ComboMult}";
-
-				let multXPos = (int32)UI_SCREEN_WIDTH - Raylib.MeasureText(str, 20) - 4;
-				let multYPos = 36;
-
-				Raylib.DrawText(str, multXPos - 2, multYPos + 2, 20, .Shadow);
-				Raylib.DrawText(str, multXPos, multYPos, 20, .White);
-			}
-		}
-
-		// Bottom right
-		{
-			void drawSideThing(String text, int32 timerWidth, int32 timerY, Color bgColor)
-			{
-				let fontSize = 10;
-				let textPadding = 2;
-
-				let timerHeight = fontSize + textPadding;
-
-				let cornerWidth = 12;
-
-				let timerX = (int32)UI_SCREEN_WIDTH - timerWidth;
-
-				Raylib.DrawRectangleRec(.(timerX + cornerWidth, timerY, timerWidth - cornerWidth, timerHeight), bgColor);
-				Raylib.DrawTriangle(.(timerX, timerY), .(timerX + cornerWidth, timerY + timerHeight), .(timerX + cornerWidth, timerY), bgColor);
-
-				Raylib.DrawText(text, timerX + 4 + cornerWidth, timerY + (textPadding / 2), fontSize, Color.White);
-			}
-
-			let baseY = UI_SCREEN_HEIGHT + 12;
-			// Highscore
-			{
-				drawSideThing(scope $"Highscore: {m_SessionHighscore.Points} points", 152, (int32)baseY - 56, .Black);
-			}
-			// Best time
-			{
-				drawSideThing(scope $"Best time: {timeFormatted(.. scope .(), m_SessionHighscore.BestTimeTimer)}", 140, (int32)baseY - 44, .(25, 25, 25, 255));
-			}
-			// Best combo
-			{
-				drawSideThing(scope $"Best combo: {m_SessionHighscore.Combo}", 128, (int32)baseY - 32, .(35, 35, 35, 255));
-			}
-		}
-
-
-		// Lives
-		{
-			for (let i < MAX_LIVES)
-			{
-				int invI = Math.Abs((int)(i - MAX_LIVES)) - 1;
-				bool noHeart = invI > (int)m_State.Lives - 1;
-
-				let heartSrcRec = Rectangle(noHeart ? 11 : 0, 0, 11, 10);
-				let heartDestRec = Rectangle(6 + ((21 + -1) * invI), UI_SCREEN_HEIGHT - 28, 11 * 2, 10 * 2);
-
-				Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec - .(2, -2, 0, 0), .Zero, 0, .Shadow);
-				Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec, .Zero, 0, .White);
-			}
-		}
-
-		// Raylib.DrawCircleV(GetMousePosition(), 4, .Red);
 	}
 
 	private Vector2 m_BGOffset;
@@ -1747,7 +1898,7 @@ class Game : Scene
 		Rectangle boardRec = .(GetBoardPos().x, GetBoardPos().y, GetBoardSize().x, GetBoardSize().y);
 
 		// Board shadow
-		Raylib.DrawRectangleRec(boardRec - Rectangle(7, -6, 0, 0), .(0, 0, 0, 40));
+		// Raylib.DrawRectangleRec(boardRec - Rectangle(7, -6, 0, 0), .(0, 0, 0, 40));
 
 		// Board bg
 		Raylib.DrawRectangleRec(boardRec, .(93, 105, 129, 255));
@@ -1775,7 +1926,7 @@ class Game : Scene
 		renderBoardTiles();
 
 		// Board cursor frame
-		if (m_State.State == .Game)
+		if (m_State.State == .Game && m_UIState == .Game)
 		{
 			if (MouseHoveringBoard())
 			{
@@ -1792,7 +1943,7 @@ class Game : Scene
 		}
 
 		// Board outline
-		Raylib.DrawRectangleLinesEx(boardRec - Rectangle(1, 1, -1, -1), LINE_WIDTH, .(17, 9, 26, 255));
+		Raylib.DrawRectangleLinesEx(boardRec - Rectangle(1, 1, -1, -1), LINE_WIDTH, .DarkOutline);
 	}
 
 	private void renderBoardTiles()
@@ -1919,7 +2070,7 @@ class Game : Scene
 		{
 			for (int d < 8)
 			{
-				drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, dx[d], dy[d]);
+				drawRecAtTile(GetBoardMouseCoords().x, GetBoardMouseCoords().y, m_TileDX[d], m_TileDY[d]);
 			}
 		}
 	}

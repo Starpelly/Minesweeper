@@ -12,6 +12,8 @@ public static struct Data
 		public static uint8[?] Bomb = Compiler.ReadBinary("assets/sprites/bomb.png");
 		public static uint8[?] Heart = Compiler.ReadBinary("assets/sprites/heart.png");
 		public static uint8[?] Boxsubmus = Compiler.ReadBinary("assets/sprites/boxsubmus.png");
+		public static uint8[?] Cloud = Compiler.ReadBinary("assets/sprites/cloud.png");
+		public static uint8[?] Logo = Compiler.ReadBinary("assets/sprites/logo.png");
 	}
 
 	public static struct Sounds
@@ -30,6 +32,8 @@ public static struct Data
 
 	public static struct Fonts
 	{
+		public static uint8[?] NokiaAtlas = Compiler.ReadBinary("assets/fonts/nokia.png");
+		public static uint8[?] NokiaOutlineAtlas = Compiler.ReadBinary("assets/fonts/nokia_outline.png");
 	}
 
 	public static struct Shaders
@@ -88,9 +92,16 @@ public class AssetManager
 	{
 		public Font Font { get; private set; }
 
-		public this(uint8* data, int32 dataCount, int32 fontSize)
+		public this(uint8* data, int32 dataCount, int32 fontSize, bool bitmap)
 		{
-			Font = Raylib.LoadFontFromMemory(".ttf", (char8*)data, dataCount, 32, null, 0);
+			if (bitmap)
+			{
+				loadBitmapFont(data, dataCount);
+			}
+			else
+			{
+				Font = Raylib.LoadFontFromMemory(".ttf", (char8*)data, dataCount, 32, null, 0);
+			}
 		}
 
 		public ~this()
@@ -131,6 +142,8 @@ public class AssetManager
 		public readonly TextureEx Bomb = new .(&Data.Textures.Bomb, Data.Textures.Bomb.Count) ~ delete _;
 		public readonly TextureEx Heart = new .(&Data.Textures.Heart, Data.Textures.Heart.Count) ~ delete _;
 		public readonly TextureEx Boxsubmus = new .(&Data.Textures.Boxsubmus, Data.Textures.Boxsubmus.Count, .TEXTURE_FILTER_BILINEAR) ~ delete _;
+		public readonly TextureEx Cloud = new .(&Data.Textures.Cloud, Data.Textures.Cloud.Count) ~ delete _;
+		public readonly TextureEx Logo = new .(&Data.Textures.Logo, Data.Textures.Logo.Count) ~ delete _;
 	}
 
 	public class Sounds
@@ -149,6 +162,8 @@ public class AssetManager
 
 	public class Fonts
 	{
+		public readonly FontEx Nokia = new .(&Data.Fonts.NokiaAtlas, Data.Fonts.NokiaAtlas.Count, 20, true) ~ delete _;
+		public readonly FontEx NokiaOutline = new .(&Data.Fonts.NokiaOutlineAtlas, Data.Fonts.NokiaOutlineAtlas.Count, 20, true) ~ delete _;
 	}
 
 	public class Shaders

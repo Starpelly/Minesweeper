@@ -102,8 +102,11 @@ class EntryPoint
 #endif
 		InitAssets();
 
+#if DEBUG
+		SetScene<Game>();
+#else
 		SetScene<Splashscreen>();
-
+#endif
 		// s_CurrentScene = scope Game();
 
 #if BF_PLATFORM_WASM
@@ -176,7 +179,7 @@ class EntryPoint
 		Raylib.BeginDrawing();
 
 		if (let game = s_CurrentScene as Game)
-			game.RenderUI();
+			game.RenderUIToTexture();
 
 #if !GAME_SCREEN_FREE
 		if (VIEWPORT_USE_RENDERTEXTURE)

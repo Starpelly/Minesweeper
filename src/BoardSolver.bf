@@ -12,7 +12,7 @@ extension Game
 		{
 			for (int d = 0; d < 8; d++)
 			{
-			    SOLVER_revealCell(x + dx[d], y + dy[d]);
+			    SOLVER_revealCell(x + m_TileDX[d], y + m_TileDY[d]);
 			}
 		}
 	}
@@ -42,7 +42,7 @@ extension Game
 
 	            for (int d = 0; d < 8; ++d)
 				{
-	                int nx = x + dx[d], ny = y + dy[d];
+	                int nx = x + m_TileDX[d], ny = y + m_TileDY[d];
 	                if (nx >= 0 && ny >= 0 && nx < m_Board.Width && ny < m_Board.Height)
 					{
 	                    if (m_State.Tiles[nx, ny] == .Closed) {

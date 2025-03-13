@@ -62,4 +62,6 @@ extension Color
 	public static Color Shadow => .(0, 0, 0, 100);
 
 	public static Color ScreenFade => .(25, 25, 25, 255);
+
+	public static Color DarkOutline => .Black;
 }
