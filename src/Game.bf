@@ -268,6 +268,13 @@ class Game : Scene
 
 	private UIState m_UIState = .Title;
 
+	private struct Cloud
+	{
+		public Vector2 Position;
+		public float Speed;
+	}
+	private List<Cloud> m_BGClouds = new .() ~ delete _;
+
 	// -----------------
 	// Private accessors
 	// -----------------
@@ -318,6 +325,26 @@ class Game : Scene
 		m_NewCameraTarget = m_Camera.target;
 
 		m_UIRenderTexture = Raylib.LoadRenderTexture((int32)UI_SCREEN_WIDTH, (int32)UI_SCREEN_HEIGHT);
+
+		// Create clouds
+		{
+			let cloudWidth = Assets.Textures.Cloud.Texture.width;
+			let cloudHeight = Assets.Textures.Cloud.Texture.height;
+
+			for (let i < 15)
+			{
+				let cloudPos = Vector2(
+					Random.Next(-(cloudWidth / 2), BASE_SCREEN_WIDTH - (cloudWidth / 2)),
+					Random.Next(-(cloudHeight / 2), BASE_SCREEN_HEIGHT - (cloudHeight / 2))
+					);
+
+				m_BGClouds.Add(Cloud()
+					{
+						Position = cloudPos,
+						Speed = Random.Next(1, 4)
+					});
+			}
+		}
 
 		RestartGame();
 	}
@@ -1004,6 +1031,23 @@ class Game : Scene
 		m_SceneTime += Raylib.GetFrameTime();
 		m_TimeSinceUIStateChange += Raylib.GetFrameTime();
 
+		// Update background clouds
+		{
+			let cloudWidth = Assets.Textures.Cloud.Texture.width;
+			let cloudHeight = Assets.Textures.Cloud.Texture.height;
+
+			for (var cloud in ref m_BGClouds)
+			{
+				cloud.Position.x -= (cloud.Speed * 10) * Raylib.GetFrameTime();
+
+				if (cloud.Position.x < -cloudWidth)
+				{
+					cloud.Position.y = Random.Next(-(cloudHeight / 2), BASE_SCREEN_HEIGHT - (cloudHeight / 2));
+					cloud.Position.x = BASE_SCREEN_WIDTH;
+				}
+			}
+		}
+
 		if (m_UIState == .Title)
 		{
 			if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT) && !m_ChangingUIState)
@@ -1619,13 +1663,18 @@ class Game : Scene
 
 	private void DrawText(String text, Vector2 pos, DrawTextSize size, DrawTextType type, uint8 alpha = 255)
 	{
+		DrawTextColored(text, pos, size, type, .(255, 255, 255, alpha));
+	}
+
+	private void DrawTextColored(String text, Vector2 pos, DrawTextSize size, DrawTextType type, Color color)
+	{
 		let txtSize = GetTextSize(size);
 
 		if (type == .Outline)
-			Raylib.DrawTextEx(Assets.Fonts.NokiaOutline.Font, text, pos, txtSize, 0, .(Color.DarkOutline.r, Color.DarkOutline.g, Color.DarkOutline.b, alpha));
+			Raylib.DrawTextEx(Assets.Fonts.NokiaOutline.Font, text, pos, txtSize, 0, .(Color.DarkOutline.r, Color.DarkOutline.g, Color.DarkOutline.b, color.a));
 		else if (type == .Shadow)
-			Raylib.DrawTextEx(Assets.Fonts.Nokia.Font, text, pos - .(2, -2), txtSize, 0, .(Color.Shadow.r, Color.Shadow.g, Color.Shadow.b, alpha));
-		Raylib.DrawTextEx(Assets.Fonts.Nokia.Font, text, pos, txtSize, 0, .(255, 255, 255, alpha));
+			Raylib.DrawTextEx(Assets.Fonts.Nokia.Font, text, pos - .(2, -2), txtSize, 0, .(Color.Shadow.r, Color.Shadow.g, Color.Shadow.b, color.a));
+		Raylib.DrawTextEx(Assets.Fonts.Nokia.Font, text, pos, txtSize, 0, color);
 	}
 
 	private Vector2 MeasureText(String text, DrawTextSize size)
@@ -1885,9 +1934,20 @@ class Game : Scene
 					let xpos = (x * BG_CHECKER_SIZE) - checkerBoardOffset.x;
 					let ypos = (y * BG_CHECKER_SIZE) - checkerBoardOffset.y;
 
-					Raylib.DrawRectangleRec(.(xpos, ypos, BG_CHECKER_SIZE, BG_CHECKER_SIZE), Color(0, 0, 0, 14));
+					Raylib.DrawRectangleRec(.(xpos, ypos, BG_CHECKER_SIZE, BG_CHECKER_SIZE), Color(0, 0, 50, 5));
 				}
 			}
+		}
+
+		// Draw clouds
+		let bgCam = Camera2D(.Zero, m_BGOffset + (m_CamShakeInfluence * 0.45f), 0, ((float)SCREEN_WIDTH / (float)BASE_SCREEN_WIDTH));
+		{
+			Raylib.BeginMode2D(bgCam);
+			for (let cloud in m_BGClouds)
+			{
+				Raylib.DrawTextureEx(Assets.Textures.Cloud.Texture, cloud.Position, 0, 1, .(168, 188, 221, 255));
+			}
+			Raylib.EndMode2D();
 		}
 
 		Raylib.DrawRectangleGradientV(0, 0, bgWidth, bgHeight + 120, .(clearColor.r, clearColor.g, clearColor.b, 0), clearColor);
@@ -1962,7 +2022,8 @@ class Game : Scene
 			let number = m_State.Numbers[x, y];
 			let numStr = number.ToString(.. scope .());
 
-			Raylib.DrawText(numStr, ((int32)drawPos.x) - 2, ((int32)drawPos.y) - 4, 8, NUMBER_COLORS[number]);
+			// Raylib.DrawText(numStr, ((int32)drawPos.x) - 2, ((int32)drawPos.y) - 4, 8, NUMBER_COLORS[number]);
+			DrawTextColored(numStr, .(((int32)drawPos.x) - 3, ((int32)drawPos.y) - 5), .Small, .NoOutline, NUMBER_COLORS[number]);
 			// Raylib.DrawTextEx(Assets.Fonts.More15Outline.Font, numStr, .(((int32)drawPos.x) - 5, ((int32)drawPos.y) - 12), 24, 1, .Black);
 		}
 
