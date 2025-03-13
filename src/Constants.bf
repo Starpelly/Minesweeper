@@ -15,8 +15,8 @@ static
 #else
 
 #if BF_PLATFORM_WASM
-	public const int32 BASE_SCREEN_WIDTH = 1280 / 2;
-	public const int32 BASE_SCREEN_HEIGHT = 720 / 2;
+	public const int32 BASE_SCREEN_WIDTH = 1280;
+	public const int32 BASE_SCREEN_HEIGHT = 720;
 #else
 	public const int32 BASE_SCREEN_WIDTH = 1280;
 	public const int32 BASE_SCREEN_HEIGHT = 720;

@@ -5,7 +5,8 @@ using RaylibBeef;
 
 namespace Minesweeper;
 
-class Game
+[Reflect(.DefaultConstructor), AlwaysInclude(AssumeInstantiated=true)]
+class Game : Scene
 {
 	// ---------
 	// Constants
@@ -239,6 +240,8 @@ class Game
 
 	private List<(int, int)> m_MinesToExplode = new .() ~ delete _;
 	private float m_MinesToExplodeTimer = 0.0f;
+
+	private float m_SceneTime = 0.0f;
 
 	// -----------------
 	// Private accessors
@@ -971,8 +974,10 @@ class Game
 
 	private Vector2I m_LastHoveringTile = .(0, 0);
 
-	public void Update()
+	public override void Update()
 	{
+		m_SceneTime += Raylib.GetFrameTime();
+
 		m_MinesToExplodeTimer += Raylib.GetFrameTime();
 		if (m_MinesToExplodeTimer >= 0.08f && m_MinesToExplode.Count > 0)
 		{
@@ -1375,7 +1380,7 @@ class Game
 		Raylib.EndTextureMode();
 	}
 
-	public void Render()
+	public override void Render()
 	{
 		// Render game shit
 		{
@@ -1443,6 +1448,10 @@ class Game
 
 			Raylib.DrawText(youWinTxt, (int32)(SCREEN_WIDTH / 2) - (txtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
 		}
+
+		// Screen fade
+		if (m_SceneTime < 0.5f)
+			Raylib.DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, .(Color.ScreenFade.r, Color.ScreenFade.g, Color.ScreenFade.b, (uint8)Math.Lerp(255, 0, Math.Normalize(m_SceneTime, 0, 0.5f))));
 	}
 
 	// ---------------

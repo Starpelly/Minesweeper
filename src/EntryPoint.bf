@@ -7,6 +7,13 @@ class EntryPoint
 {
 	private const bool VIEWPORT_USE_RENDERTEXTURE = false;
 
+	private enum SceneType
+	{
+		Null,
+		Splashscreen,
+		Game
+	}
+
 #if BF_PLATFORM_WASM
 	[CLink, CallingConvention(.Stdcall)]
 	private static extern void emscripten_console_log(char8* utf8String);
@@ -24,11 +31,24 @@ class EntryPoint
 
 	private static void emscriptenMainLoop()
 	{
-		Loop(s_Game);
+		let test = true;
+
+		if (test)
+		{
+			Loop();
+		}
+		else
+		{
+			Raylib.BeginDrawing();
+			Raylib.ClearBackground(.Red);
+			Raylib.EndDrawing();
+		}
 	}
 #endif
 
-	private static Game s_Game;
+	private static Scene s_CurrentScene ~ delete _;
+	private static SceneType s_SceneToSwapTo = .Null;
+	private static bool s_SwappingScene = false;
 
 #if !GAME_SCREEN_FREE
 	private static RenderTexture s_ScreenTexture;
@@ -43,6 +63,15 @@ class EntryPoint
 	public static int ViewportScale => s_ViewportScale;
 
 	private static Vector2 s_LastViewportSize = .(0, 0);
+
+	public static void SetScene<T>() where T : Scene
+	{
+		s_SwappingScene = true;
+		if (typeof(T) == typeof(Splashscreen))
+			s_SceneToSwapTo = .Splashscreen;
+		else if (typeof(T) == typeof(Game))
+			s_SceneToSwapTo = .Game;
+	}
 
 	public static void Start(String[] args)
 	{
@@ -72,14 +101,17 @@ class EntryPoint
 #endif
 #endif
 		InitAssets();
-		s_Game = scope Game();
+
+		SetScene<Splashscreen>();
+
+		// s_CurrentScene = scope Game();
 
 #if BF_PLATFORM_WASM
 		emscripten_set_main_loop(=> emscriptenMainLoop, 0, 1);
 #else
 		while (!Raylib.WindowShouldClose())
 		{
-			Loop(s_Game);
+			Loop();
 		}
 #endif
 
@@ -93,8 +125,28 @@ class EntryPoint
 		Raylib.CloseWindow();
 	}
 
-	private static void Loop(Game game)
+	private static void Loop()
 	{
+		// Swap scene
+		if (s_SwappingScene == true)
+		{
+			if (s_CurrentScene != null)
+				delete s_CurrentScene;
+
+			// let obj = s_SceneToSwapTo.CreateObject();
+			// s_CurrentScene = (Scene)obj;
+
+			switch (s_SceneToSwapTo)
+			{
+			case .Game: s_CurrentScene = new Game(); break;
+			case .Splashscreen: s_CurrentScene = new Splashscreen(); break;
+			case .Null: /* Idk??? */ break;
+			}
+
+			s_SceneToSwapTo = .Null;
+			s_SwappingScene = false;
+		}
+
 		let viewportSize = getLargestSizeForViewport();
 		let viewportPos = getCenteredPositionForViewport(viewportSize);
 
@@ -119,14 +171,14 @@ class EntryPoint
 		s_MousePositionViewport = .((relativeMouseX / viewportSize.x) * SCREEN_WIDTH, (relativeMouseY / viewportSize.y) * SCREEN_HEIGHT);
 		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, SCREEN_WIDTH), Math.Clamp(s_MousePositionViewport.y, 0, SCREEN_HEIGHT));
 
-		game.Update();
+		s_CurrentScene.Update();
 
 		Raylib.BeginDrawing();
 
-		game.RenderUI();
+		if (let game = s_CurrentScene as Game)
+			game.RenderUI();
 
 #if !GAME_SCREEN_FREE
-
 		if (VIEWPORT_USE_RENDERTEXTURE)
 		{
 			Raylib.BeginTextureMode(s_ScreenTexture);
@@ -138,10 +190,9 @@ class EntryPoint
 		}
 #endif
 
-		game.Render();
+		s_CurrentScene.Render();
 
 #if !GAME_SCREEN_FREE
-
 		if (VIEWPORT_USE_RENDERTEXTURE)
 		{
 			Raylib.EndTextureMode();

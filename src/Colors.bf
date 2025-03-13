@@ -60,4 +60,6 @@ extension Color
 	public static Color Blue => .(0, 0, 255, 255);
 
 	public static Color Shadow => .(0, 0, 0, 100);
+
+	public static Color ScreenFade => .(25, 25, 25, 255);
 }

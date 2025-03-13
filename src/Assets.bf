@@ -11,6 +11,7 @@ public static struct Data
 		public static uint8[?] Frame = Compiler.ReadBinary("assets/sprites/frame.png");
 		public static uint8[?] Bomb = Compiler.ReadBinary("assets/sprites/bomb.png");
 		public static uint8[?] Heart = Compiler.ReadBinary("assets/sprites/heart.png");
+		public static uint8[?] Boxsubmus = Compiler.ReadBinary("assets/sprites/boxsubmus.png");
 	}
 
 	public static struct Sounds
@@ -23,6 +24,7 @@ public static struct Data
 		public static uint8[?] ClearArea = Compiler.ReadBinary("assets/sounds/clear-area.wav");
 		public static uint8[?] FailedChord = Compiler.ReadBinary("assets/sounds/failed-chord.wav");
 		public static uint8[?] Hover = Compiler.ReadBinary("assets/sounds/hover.wav");
+		public static uint8[?] Splashscreen = Compiler.ReadBinary("assets/sounds/boxsubmus-splash.wav");
 		// public static uint8[?] GameOver = Compiler.ReadBinary("assets/sounds/gameover.wav");
 	}
 
@@ -128,6 +130,7 @@ public class AssetManager
 		public readonly TextureEx Frame = new .(&Data.Textures.Frame, Data.Textures.Frame.Count) ~ delete _;
 		public readonly TextureEx Bomb = new .(&Data.Textures.Bomb, Data.Textures.Bomb.Count) ~ delete _;
 		public readonly TextureEx Heart = new .(&Data.Textures.Heart, Data.Textures.Heart.Count) ~ delete _;
+		public readonly TextureEx Boxsubmus = new .(&Data.Textures.Boxsubmus, Data.Textures.Boxsubmus.Count, .TEXTURE_FILTER_BILINEAR) ~ delete _;
 	}
 
 	public class Sounds
@@ -140,6 +143,7 @@ public class AssetManager
 		public readonly SoundFX ClearArea = new .(&Data.Sounds.ClearArea, Data.Sounds.ClearArea.Count) ~ delete _;
 		public readonly SoundFX FailedChord = new .(&Data.Sounds.FailedChord, Data.Sounds.FailedChord.Count) ~ delete _;
 		public readonly SoundFX Hover = new .(&Data.Sounds.Hover, Data.Sounds.Hover.Count) ~ delete _;
+		public readonly SoundFX Splashscreen = new .(&Data.Sounds.Splashscreen, Data.Sounds.Splashscreen.Count) ~ delete _;
 		// public readonly SoundFX GameOver = new .(&Data.Sounds.GameOver, Data.Sounds.GameOver.Count) ~ delete _;
 	}
 
