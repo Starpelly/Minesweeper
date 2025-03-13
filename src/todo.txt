@@ -1,4 +1,2 @@
-Add version to title screen
-Add copyright notice to title screen
 Complete game over and win screens
 Replace some sound effects

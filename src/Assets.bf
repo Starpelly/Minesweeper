@@ -42,6 +42,7 @@ public static struct Data
 		public static uint8[?] Splashscreen = Compiler.ReadBinary("assets/sounds/boxsubmus-splash.wav");
 		public static uint8[?] StartGame = Compiler.ReadBinary("assets/sounds/startgame.wav");
 		public static uint8[?] LoseTransition = Compiler.ReadBinary("assets/sounds/lose-transition.wav");
+		public static uint8[?] Restart = Compiler.ReadBinary("assets/sounds/restart.wav");
 		// public static uint8[?] GameOver = Compiler.ReadBinary("assets/sounds/gameover.wav");
 	}
 
@@ -187,6 +188,7 @@ public class AssetManager
 		public readonly SoundFX Splashscreen = new .(&Data.Sounds.Splashscreen, Data.Sounds.Splashscreen.Count) ~ delete _;
 		public readonly SoundFX StartGame = new .(&Data.Sounds.StartGame, Data.Sounds.StartGame.Count) ~ delete _;
 		public readonly SoundFX LoseTransition = new .(&Data.Sounds.LoseTransition, Data.Sounds.LoseTransition.Count) ~ delete _;
+		public readonly SoundFX Restart = new .(&Data.Sounds.Restart, Data.Sounds.Restart.Count) ~ delete _;
 		// public readonly SoundFX GameOver = new .(&Data.Sounds.GameOver, Data.Sounds.GameOver.Count) ~ delete _;
 	}
 

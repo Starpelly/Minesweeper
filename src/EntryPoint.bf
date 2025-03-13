@@ -179,8 +179,10 @@ class EntryPoint
 		Raylib.BeginDrawing();
 
 		if (let game = s_CurrentScene as Game)
+		{
 			game.RenderUIToTexture();
-
+			game.RenderOverlayToTexture();
+		}
 #if !GAME_SCREEN_FREE
 		if (VIEWPORT_USE_RENDERTEXTURE)
 		{

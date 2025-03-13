@@ -1,3 +1,4 @@
+using System;
 namespace Minesweeper;
 
 static
@@ -27,4 +28,6 @@ static
 
 	public static float SCREEN_ASPECT_RATIO => (float)BASE_SCREEN_WIDTH / (float)BASE_SCREEN_HEIGHT;
 #endif
+
+	public static Version GameVerison = .(1, 0, 0);
 }

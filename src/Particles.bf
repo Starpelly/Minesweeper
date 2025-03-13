@@ -102,35 +102,91 @@ class ExplosionFlashParticle : Particle
 
 class NewPointsParticle : Particle
 {
-	private Vector2 Position;
-	private Color Color;
+	private Vector2 m_Position;
+	private Color m_Color;
 
-	private String Text = new .() ~ delete _;
+	private String m_Text = new .() ~ delete _;
 
 	private float m_Time = 0.0f;
 	private Color m_DrawColor;
 
 	public this(Vector2 position, Color color, String text)
 	{
-		Position = position;
-		Color = color;
-		Text.Append(text);
+		m_Position = position;
+		m_Color = color;
+		m_Text.Append(text);
 	}
 
 	public override void Update()
 	{
 		m_Time += Raylib.GetFrameTime();
-		Position.y -= 30 * Raylib.GetFrameTime();
+		m_Position.y -= 30 * Raylib.GetFrameTime();
 
 		if (m_Time >= 1.0f)
 			DestroySelf();
 
-		m_DrawColor = Color(Color.r, Color.g, Color.b, (uint8)(Math.Lerp(255, 0, m_Time)));
+		m_DrawColor = Color(m_Color.r, m_Color.g, m_Color.b, (uint8)(Math.Lerp(255, 0, m_Time)));
 	}
 
 	public override void Render()
 	{
 		// Raylib.DrawRectangleRec(.(Position.x, Position.y, 8, 8), Color);
-		Raylib.DrawText(Text, (int32)Position.x, (int32)Position.y, 10, m_DrawColor);
+		Raylib.DrawText(m_Text, (int32)m_Position.x, (int32)m_Position.y, 10, m_DrawColor);
+	}
+}
+
+class ExplosionParticle : Particle
+{
+	private readonly Vector2 m_Position;
+
+	private float m_Time = 0.0f;
+
+	public this(Vector2 position)
+	{
+		m_Position = position;
+	}
+
+	public override void Update()
+	{
+		m_Time += Raylib.GetFrameTime();
+
+		if (m_Time >= 1.0f)
+			DestroySelf();
+	}
+
+	public override void Render()
+	{
+		/*
+		let radius = Math.Lerp(4, 280, EasingFunctions.OutCubic(Math.Normalize(m_Time, 0, 1.0f, true)));
+		let alpha = (uint8)Math.Lerp(125, 0, EasingFunctions.Linear(Math.Normalize(m_Time, 0, 0.4f, true)));
+		Raylib.DrawCircleV(m_Position, radius, .(255, 0, 0, alpha));
+		*/
+	}
+}
+
+class WinParticle : Particle
+{
+	private readonly Vector2 m_Position;
+
+	private float m_Time = 0.0f;
+
+	public this(Vector2 position)
+	{
+		m_Position = position;
+	}
+
+	public override void Update()
+	{
+		m_Time += Raylib.GetFrameTime();
+
+		if (m_Time >= 1.0f)
+			DestroySelf();
+	}
+
+	public override void Render()
+	{
+		let radius = Math.Lerp(6, 280, EasingFunctions.OutCubic(Math.Normalize(m_Time, 0, 1.0f, true)));
+		let alpha = (uint8)Math.Lerp(125, 0, EasingFunctions.Linear(Math.Normalize(m_Time, 0, 0.6f, true)));
+		Raylib.DrawCircleV(m_Position, radius, .(255, 255, 255, alpha));
 	}
 }

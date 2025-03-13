@@ -32,15 +32,20 @@ class Game : Scene
 	private static int BG_CHECKER_SIZE => (int)(48 * VIEWPORT_SCALE);
 
 	private const uint MAX_LIVES = 3;
+
 	private const float SECONDS_PER_COMBO = 4.0f;
 	private const float SECONDS_PER_COMBO_DECREMENTING = 2.0f;
 	private const uint CLEARS_PER_COMBO = 8;
 
 	private const float TIME_BETWEEN_BOARDS_WIN = 0.5f;
 	private const float TIME_BETWEEN_BOARDS_FAIL = 2.45f - 0.5f;
-	private const float TIME_BETWEEN_BOARDS_GAMEOVER = 0.75f;
+	private const float TIME_BETWEEN_BOARDS_GAMEOVER = 2.45f - 0.5f;
 
-	private const float LOSE_TO_NEWGAME_TIME = 0.68f;
+	private const float CLEARBOARD_TRANSITION_TIME = 0.82f;
+	private const float CLEARBOARD_TILE_LENGTH_PADDING = 0.45f;
+
+	private const float GAMEOVER_RESTART_TIME = 1.75f;
+	private const float GAMEOVER_RESTART_PADDING_TIME = 0.45f;
 
 	private const double POINTS_PER_BOARD_COLUMN = 8000; // 8k
 	private const double POINTS_PER_BOARD_ROW = 50000; // 50k
@@ -95,13 +100,17 @@ class Game : Scene
 		Lose,
 		Win,
 		GameOver,
-		LoseToGame
+		LoseToGame,
+		WinToGame,
+		GameOverToRestart,
 	}
 
 	private enum DrawTextSize
 	{
 		Big,
-		Small
+		Small,
+		Title,
+		Heading,
 	}
 
 	private enum DrawTextType
@@ -261,6 +270,7 @@ class Game : Scene
 	private Highscore m_SessionHighscore = new .() ~ delete _;
 
 	private RenderTexture2D m_UIRenderTexture;
+	private RenderTexture2D m_OverlayRenderTexture;
 
 	private List<(int, int)> m_MinesToExplode = new .() ~ delete _;
 	private float m_MinesToExplodeTimer = 0.0f;
@@ -284,6 +294,9 @@ class Game : Scene
 
 	private float m_TimeSinceMineTransition = 0.0f;
 	private Dictionary<int, List<(int, int)>> m_MineTransitionGroups = new .() ~ DeleteDictionaryAndValues!(_);
+
+	private float m_TimeSinceGameRestart = 0.0f;
+	private bool m_RestartingGame = false;
 
 	// -----------------
 	// Private accessors
@@ -387,6 +400,7 @@ class Game : Scene
 		m_NewCameraTarget = m_Camera.target;
 
 		m_UIRenderTexture = Raylib.LoadRenderTexture((int32)UI_SCREEN_WIDTH, (int32)UI_SCREEN_HEIGHT);
+		m_OverlayRenderTexture = Raylib.LoadRenderTexture((int32)UI_SCREEN_WIDTH, (int32)UI_SCREEN_HEIGHT);
 
 		// Create clouds
 		{
@@ -406,6 +420,7 @@ class Game : Scene
 
 	public ~this()
 	{
+		Raylib.UnloadRenderTexture(m_OverlayRenderTexture);
 		Raylib.UnloadRenderTexture(m_UIRenderTexture);
 	}
 
@@ -446,11 +461,13 @@ class Game : Scene
 		Remake(newBoard, false);
 	}
 
-	public void OnMineExplode(bool start)
+	public void OnMineExplode(bool start, int x, int y)
 	{
 		Raylib.PlaySound(Assets.Sounds.Boom.Sound);
-		ShakeCamera((start) ? 45 : 24 / 10.0f, 8, 0.6f);
+		ShakeCamera((start) ? 35 : 24 / 10.0f, 8, 0.6f);
 		CreateParticle(new ExplosionFlashParticle((start) ? 240 : 15));
+
+		CreateParticle(new ExplosionParticle(.(x * (TILE_SIZE + TILE_SPACING) + (TILE_SIZE / 2), y * (TILE_SIZE + TILE_SPACING) + (TILE_SIZE / 2))));
 	}
 
 	public void Remake(Board board, bool loseState)
@@ -579,7 +596,7 @@ class Game : Scene
 		// Lose if we opened a mine
 		if (m_State.Tiles[x, y] == .Opened && m_State.Mines[x, y] == true)
 		{
-			OnMineExplode(true);
+			OnMineExplode(true, x, y);
 			m_MinesToExplodeTimer = 0.0f;
 
 			m_State.SessionTimer.Stop();
@@ -658,29 +675,35 @@ class Game : Scene
 		}
 
 		// You win!!!!!
-		m_State.State = .Win;
-		m_State.SessionTimer.Stop();
-		m_State.ComboTimer.Stop();
-		m_State.MineTimer.Stop();
-
-		Raylib.SetSoundVolume(Assets.Sounds.Win.Sound, 0.5f);
-		Raylib.PlaySound(Assets.Sounds.Win.Sound);
-
-		// Hack for all tiles in the win state
-		// if (false)
+		if (m_State.State != .Win)
 		{
-			for (let bx < m_Board.Width)
+			m_State.State = .Win;
+			m_State.SessionTimer.Stop();
+			m_State.ComboTimer.Stop();
+			m_State.MineTimer.Stop();
+
+			Raylib.SetSoundVolume(Assets.Sounds.Win.Sound, 0.5f);
+			Raylib.PlaySound(Assets.Sounds.Win.Sound);
+
+			CreateParticle(new WinParticle(.(x * (TILE_SIZE + TILE_SPACING) + + (TILE_SIZE / 2), y * (TILE_SIZE + TILE_SPACING) + (TILE_SIZE / 2))));
+
+			// Hack for all tiles in the win state
+			// if (false)
 			{
-				for (let by < m_Board.Height)
+				for (let bx < m_Board.Width)
 				{
-					if (!m_State.Cleared[bx, by])
-					if (m_State.Numbers[bx, by] > 0 && !m_State.Mines[bx, by])
-					SolveTile(bx, by);
+					for (let by < m_Board.Height)
+					{
+						if (!m_State.Cleared[bx, by])
+						if (m_State.Numbers[bx, by] > 0 && !m_State.Mines[bx, by])
+						SolveTile(bx, by);
+					}
 				}
 			}
-		}
 
-		m_State.NextBoardTimer.Start();
+			m_State.NextBoardTimer.Start();
+
+		}
 	}
 
 	public void Chord(int x, int y)
@@ -1051,7 +1074,7 @@ class Game : Scene
 		m_State.ComboMult = 1;
 		m_State.ComboIncrementor = 0;
 		m_State.DecrementingCombo = false;
-		m_State.Lives = 3;
+		m_State.Lives = MAX_LIVES;
 		m_State.MaxComboTimerTime = SECONDS_PER_COMBO;
 		m_State.StartMineAdd = 0;
 
@@ -1071,6 +1094,14 @@ class Game : Scene
 
 		MakeStage(m_State.Stage);
 		centerCamera();
+
+		// Idk, this just felt weird without it
+		for (var cloud in ref m_BGClouds)
+		{
+			RandomizeCloudX(ref cloud);
+			RandomizeCloudY(ref cloud);
+			RandomizeCloudSpeed(ref cloud);
+		}
 	}
 
 	// ------
@@ -1085,6 +1116,7 @@ class Game : Scene
 	{
 		m_SceneTime += Raylib.GetFrameTime();
 		m_TimeSinceUIStateChange += Raylib.GetFrameTime();
+		m_TimeSinceGameRestart += Raylib.GetFrameTime();
 
 		#if DEBUG
 		// Debug: Restart game
@@ -1258,7 +1290,7 @@ class Game : Scene
 				let mine = m_MinesToExplode[0];
 				m_State.Tiles[mine.0, mine.1] = .Opened;
 
-				OnMineExplode(false);
+				OnMineExplode(false, mine.0, mine.1);
 
 				m_MinesToExplode.RemoveAt(0);
 				m_MinesToExplodeTimer = 0.0f;
@@ -1352,8 +1384,40 @@ class Game : Scene
 				}
 			}
 
+			// I don't really care anymore
+			{
+				if (m_TimeSinceGameRestart >= GAMEOVER_RESTART_TIME + GAMEOVER_RESTART_PADDING_TIME && m_RestartingGame)
+				{
+					m_RestartingGame = false;
+				}
+			}
+
+			void clearBoardAnimation()
+			{
+				Raylib.PlaySound(Assets.Sounds.LoseTransition.Sound);
+
+				for (let d in m_MineTransitionGroups)
+				{
+					delete d.value;
+				}
+				m_MineTransitionGroups.Clear();
+
+				for (let x < m_Board.Width)
+				{
+				    for (let y < m_Board.Height)
+				    {
+				        int distance = x + y; // Manhattan distance from (0,0)
+
+				        if (!m_MineTransitionGroups.ContainsKey(distance))
+				            m_MineTransitionGroups[distance] = new .();
+
+				        m_MineTransitionGroups[distance].Add((x, y));
+				    }
+				}
+			}
+
 			// Update combo timer
-			if (m_State.State == .Game && m_UIState == .Game)
+			if (m_State.State == .Game && m_UIState == .Game && !m_RestartingGame)
 			{
 				if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
 				{
@@ -1370,11 +1434,6 @@ class Game : Scene
 					m_State.ComboIncrementor = 0;
 
 					m_State.ComboMult = Math.Max(1, m_State.ComboMult);
-				}
-
-				if (m_State.Points >= m_SessionHighscore.Points)
-				{
-					m_SessionHighscore.BestTimeTimer.CopyFrom(m_State.SessionTimer);
 				}
 
 				if (m_State.ComboTimer.ElapsedSeconds >= m_State.MaxComboTimerTime)
@@ -1402,11 +1461,62 @@ class Game : Scene
 				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_WIN)
 				{
 					m_State.ComboTimer.Reset();
+					m_State.State = .WinToGame;
 
+					m_TimeSinceMineTransition = 0.0f;
+					clearBoardAnimation();
+				}
+			}
+			else if (m_State.State == .Lose)
+			{
+				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_FAIL)
+				{
+					m_State.State = .LoseToGame;
+
+					m_State.ComboMult = 0;
+					m_State.ComboIncrementor = 0;
+					m_State.ComboTimer.Reset();
+
+					m_TimeSinceMineTransition = 0.0f;
+					clearBoardAnimation();
+				}
+			}
+			else if (m_State.State == .GameOver)
+			{
+				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER + 0.65f)
+				{
+					if (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT))
+					{
+						m_State.State = .GameOverToRestart;
+						m_State.NextBoardTimer.Restart();
+						m_TimeSinceGameRestart = 0.0f;
+						m_RestartingGame = true;
+
+						Raylib.PlaySound(Assets.Sounds.Restart.Sound);
+					}
+				}
+			}
+			else if (m_State.State == .LoseToGame)
+			{
+				m_TimeSinceMineTransition += Raylib.GetFrameTime();
+
+				if (m_TimeSinceMineTransition >= CLEARBOARD_TRANSITION_TIME + (CLEARBOARD_TILE_LENGTH_PADDING / 2))
+				{
+					m_State.NextBoardTimer.Reset();
+
+					// m_State.TileType = (uint)Random.Next(0, 7);
+
+					Remake(m_Board, true);
+				}
+			}
+			else if (m_State.State == .WinToGame)
+			{
+				m_TimeSinceMineTransition += Raylib.GetFrameTime();
+
+				if (m_TimeSinceMineTransition >= CLEARBOARD_TRANSITION_TIME + (CLEARBOARD_TILE_LENGTH_PADDING / 2))
+				{
 					// Go to the next stage
 					m_State.Stage++;
-
-					Console.WriteLine(m_State.Stage);
 
 					m_State.NextBoardTimer.Reset();
 
@@ -1415,62 +1525,18 @@ class Game : Scene
 					MakeStage(m_State.Stage);
 				}
 			}
-			else if (m_State.State == .Lose)
+			else if (m_State.State == .GameOverToRestart)
 			{
-				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_FAIL)
-				{
-					m_TimeSinceMineTransition = 0.0f;
-					m_State.State = .LoseToGame;
-
-					m_State.ComboMult = 0;
-					m_State.ComboIncrementor = 0;
-					m_State.ComboTimer.Reset();
-
-					Raylib.PlaySound(Assets.Sounds.LoseTransition.Sound);
-
-					for (let d in m_MineTransitionGroups)
-					{
-						delete d.value;
-					}
-					m_MineTransitionGroups.Clear();
-
-					for (let x < m_Board.Width)
-					{
-					    for (let y < m_Board.Height)
-					    {
-					        int distance = x + y; // Manhattan distance from (0,0)
-
-					        if (!m_MineTransitionGroups.ContainsKey(distance))
-					            m_MineTransitionGroups[distance] = new .();
-
-					        m_MineTransitionGroups[distance].Add((x, y));
-					    }
-					}
-				}
-			}
-			else if (m_State.State == .GameOver)
-			{
-				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER)
-				{
-					if (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT))
-					{
-						m_State.NextBoardTimer.Reset();
-						RestartGame();
-					}
-				}
-			}
-			else if (m_State.State == .LoseToGame)
-			{
-				m_TimeSinceMineTransition += Raylib.GetFrameTime();
-
-				if (m_TimeSinceMineTransition >= LOSE_TO_NEWGAME_TIME)
+				if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= GAMEOVER_RESTART_TIME * 0.5f)
 				{
 					m_State.NextBoardTimer.Reset();
-
-					// m_State.TileType = (uint)Random.Next(0, 7);
-
-					Remake(m_Board, true);
+					RestartGame();
 				}
+			}
+
+			if (m_State.Points >= m_SessionHighscore.Points)
+			{
+				m_SessionHighscore.BestTimeTimer.CopyFrom(m_State.SessionTimer);
 			}
 		}
 	}
@@ -1480,6 +1546,14 @@ class Game : Scene
 		Raylib.BeginTextureMode(m_UIRenderTexture);
 		Raylib.ClearBackground(.(0, 0, 0, 0));
 		renderUI();
+		Raylib.EndTextureMode();
+	}
+
+	public void RenderOverlayToTexture()
+	{
+		Raylib.BeginTextureMode(m_OverlayRenderTexture);
+		Raylib.ClearBackground(.(0, 0, 0, 0));
+		renderOverlay();
 		Raylib.EndTextureMode();
 	}
 
@@ -1528,33 +1602,36 @@ class Game : Scene
 		);
 		Raylib.EndBlendMode();
 
+		void drawGameOver(float elapsedSeconds)
+		{
+			Raylib.DrawRectangleRec(.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT),
+				.(255, 0, 0, (uint8)Math.Lerp(0, 120, Math.Normalize(elapsedSeconds - TIME_BETWEEN_BOARDS_GAMEOVER, 0, 0.25f, true))));
+		}
+
 		if (m_State.State == .Win)
 		{
-			Raylib.DrawRectangleRec(.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), .(0, 0, 0, 200));
-
-			let youWinTxt = "You Win!!!";
-			let youWinSize = 30 * (int32)UI_SCALE;
-			let txtMeasure = Raylib.MeasureText(youWinTxt, youWinSize);
-
-			Raylib.DrawText(youWinTxt, (int32)(SCREEN_WIDTH / 2) - (txtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
+			// empty
 		}
-		else if (m_State.State == .GameOver)
+		else if ((m_State.State == .GameOver && (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER)))
 		{
-			Raylib.DrawRectangleRec(.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), .(255, 0, 0, 120));
-
-			let youWinTxt = "Game Over!!! :(";
-			let youWinSize = 30 * (int32)UI_SCALE;
-			let txtMeasure = Raylib.MeasureText(youWinTxt, youWinSize);
-
-			if (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER)
-			{
-				let str = "(Left Click to restart)";
-				let clTxtMeasure = Raylib.MeasureText(str, 10 * (int32)UI_SCALE);
-				Raylib.DrawText(str, (int32)(SCREEN_WIDTH / 2) - (clTxtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) + 20, 10 * (int32)UI_SCALE, .White);
-			}
-
-			Raylib.DrawText(youWinTxt, (int32)(SCREEN_WIDTH / 2) - (txtMeasure / 2), (int32)(SCREEN_HEIGHT / 2) - (youWinSize / 2), youWinSize, Color.White);
+			drawGameOver((float)m_State.NextBoardTimer.Elapsed.TotalSeconds);
 		}
+		else if (m_State.State == .GameOverToRestart)
+		{
+			drawGameOver(50.0f);
+		}
+
+		// Draw overlay texture
+		Raylib.BeginBlendMode(.BLEND_ALPHA_PREMULTIPLY);
+		Raylib.DrawTexturePro(
+			m_OverlayRenderTexture.texture,
+			.(0, 0, m_OverlayRenderTexture.texture.width, -m_OverlayRenderTexture.texture.height),
+			.(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT),
+			.(0, 0),
+			0,
+			.White
+		);
+		Raylib.EndBlendMode();
 
 		// Screen fade
 		if (m_SceneTime < 0.5f)
@@ -1567,7 +1644,7 @@ class Game : Scene
 
 	private void centerCamera()
 	{
-		let drawZoom = m_Camera.zoom * (SCREEN_WIDTH / (float)BASE_SCREEN_WIDTH);
+		let drawZoom = m_Camera.zoom * ((float)SCREEN_WIDTH / (float)BASE_SCREEN_WIDTH);
 		m_Camera.target = Vector2(((GetBoardSize().x - LINE_WIDTH) / 2) + (-(SCREEN_WIDTH / drawZoom) / 2), (((GetBoardSize().y - LINE_WIDTH) / 2) + (-(SCREEN_HEIGHT / drawZoom) / 2)));
 	}
 
@@ -1666,6 +1743,8 @@ class Game : Scene
 		{
 		case .Big: return 24;
 		case .Small: return 12;
+		case .Title: return 24 * 2;
+		case .Heading: return 24;
 		}
 	}
 
@@ -1716,7 +1795,7 @@ class Game : Scene
 				{
 					let yOffset = Math.Sin((Raylib.GetTime() + (charIndex * 0.2f)) * 4) * 4;
 
-					Raylib.DrawTextureEx(texture.Texture, (.(-textureLogo.width / 2, -textureLogo.height / 2) - .(0, 80)) + offset + .(0, (float)yOffset), 0, 1, color);
+					Raylib.DrawTextureEx(texture.Texture, (.(-textureLogo.width / 2, -textureLogo.height / 2) - .(0, 20)) + offset + .(0, (float)yOffset), 0, 1, color);
 
 					charIndex++;
 				}
@@ -1737,6 +1816,12 @@ class Game : Scene
 				let txtSize = 12 * 2;
 				let txtPos = Vector2(-Raylib.MeasureTextEx(Assets.Fonts.Nokia.Font, txt, txtSize, 0).x / 2, 90);
 				DrawText(txt, txtPos, .Big, .Outline, uiAlpha);
+
+				// Draw version
+				DrawText(scope $"v{GameVerison.Major}.{GameVerison.Minor}.{GameVerison.Revision}", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(UI_SCREEN_WIDTH - 38, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
+
+				// Attribution
+				DrawText(scope $"Created by Starpelly", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(4, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
 			}
 			Raylib.EndMode2D();
 		}
@@ -1936,6 +2021,68 @@ class Game : Scene
 		}
 	}
 
+	private void renderOverlay()
+	{
+		void drawGameOver(float elapsedSeconds)
+		{
+			// "Game over" title
+			{
+				let youWinTxt = "Game Over";
+				let youWinSize = GetTextSize(.Title);
+				let txtMeasure = MeasureText(youWinTxt, .Title);
+
+				let x = Math.Lerp(UI_SCREEN_WIDTH, 0,
+					EasingFunctions.OutExpo(Math.Normalize(elapsedSeconds - TIME_BETWEEN_BOARDS_GAMEOVER, 0, 0.65f, true)));
+				DrawText(youWinTxt, .( (UI_SCREEN_WIDTH / 2) - (txtMeasure.x / 2) - x, (UI_SCREEN_HEIGHT / 2) - (youWinSize / 2) - 44), .Title, .Outline);
+			}
+			// "Game over" prompt
+			{
+				let str = "Click to restart!";
+				let txtMeasure = MeasureText(str, .Heading);
+
+				let x = Math.Lerp(-UI_SCREEN_WIDTH, 0,
+					EasingFunctions.OutExpo(Math.Normalize(elapsedSeconds - TIME_BETWEEN_BOARDS_GAMEOVER, 0, 0.65f, true)));
+				DrawText(str, .( (UI_SCREEN_WIDTH / 2) - (txtMeasure.x / 2) - x, (UI_SCREEN_HEIGHT / 2) + 44), .Heading, .Outline);
+			}
+		}
+
+		if (m_State.State == .Win)
+		{
+			// empty
+		}
+		else if ((m_State.State == .GameOver && (m_State.NextBoardTimer.Elapsed.TotalSeconds >= TIME_BETWEEN_BOARDS_GAMEOVER)))
+		{
+			drawGameOver((float)m_State.NextBoardTimer.Elapsed.TotalSeconds);
+		}
+		else if (m_State.State == .GameOverToRestart)
+		{
+			drawGameOver(50.0f);
+		}
+
+		if (m_RestartingGame)
+		{
+			var radius = 0.0f;
+			let timerElapsed = m_TimeSinceGameRestart;
+			let halfTimerTime = GAMEOVER_RESTART_TIME * 0.5f;
+			let maxRadius = (UI_SCREEN_HEIGHT) + 20;
+
+			// half the transition is spent scaling in
+			if (timerElapsed < halfTimerTime + GAMEOVER_RESTART_PADDING_TIME)
+			{
+				radius = Math.Lerp(0, maxRadius, EasingFunctions.InOutQuart(Math.Normalize(timerElapsed, 0.0f, halfTimerTime, true)));
+			}
+			else // other half scaling out
+			{
+				radius = Math.Lerp(maxRadius, 0, EasingFunctions.InOutQuart(Math.Normalize(timerElapsed - GAMEOVER_RESTART_PADDING_TIME - halfTimerTime, 0.0f, halfTimerTime, true)));
+			}
+
+			let circlePos = Vector2(UI_SCREEN_WIDTH / 2, UI_SCREEN_HEIGHT / 2);
+			if (radius > 2)
+				Raylib.DrawCircleV(circlePos, radius + (2), .Black);
+			Raylib.DrawCircleV(circlePos, radius, .(155, 175, 207, 255));
+		}
+	}
+
 	private Vector2 m_BGOffset;
 
 	private void renderBackground()
@@ -1965,7 +2112,7 @@ class Game : Scene
 					let xpos = (x * BG_CHECKER_SIZE) - checkerBoardOffset.x;
 					let ypos = (y * BG_CHECKER_SIZE) - checkerBoardOffset.y;
 
-					Raylib.DrawRectangleRec(.(xpos, ypos, BG_CHECKER_SIZE, BG_CHECKER_SIZE), Color(0, 0, 50, 5));
+					Raylib.DrawRectangleRec(.(xpos, ypos, BG_CHECKER_SIZE, BG_CHECKER_SIZE), Color(0, 0, 50, 8));
 				}
 			}
 		}
@@ -1974,11 +2121,12 @@ class Game : Scene
 		let bgDrawCam = Camera2D(m_BGOffset + (m_CamShakeInfluence * 0.35f), .(-(BASE_SCREEN_WIDTH / m_BGCamera.zoom) / 2, -(BASE_SCREEN_HEIGHT / m_BGCamera.zoom) / 2), 0, ((float)SCREEN_WIDTH / (float)BASE_SCREEN_WIDTH) * m_BGCamera.zoom);
 		{
 			let altCloudColor = Color(122, 144, 181, 255);
+			let cloudColor = Color(168, 188, 221, 255);
 
 			Raylib.BeginMode2D(bgDrawCam);
 			for (let cloud in m_BGClouds)
 			{
-				Raylib.DrawTextureEx(Assets.Textures.Cloud.Texture, cloud.Position, 0, 1, .(168, 188, 221, 255));
+				Raylib.DrawTextureEx(Assets.Textures.Cloud.Texture, cloud.Position, 0, 1, altCloudColor);
 			}
 			Raylib.EndMode2D();
 		}
@@ -2075,7 +2223,16 @@ class Game : Scene
 			let closedTileSize = 18;
 			let halfTileSize = 18 / 2;
 
-			let tileColor = ((x + y) % 2 == 0) ? TILE_COLOR_0 : TILE_COLOR_1;
+			var tileColor = ((x + y) % 2 == 0) ? TILE_COLOR_0 : TILE_COLOR_1;
+			if (m_State.State == .Win)
+			{
+				let lerp = Math.Normalize((float)m_State.NextBoardTimer.Elapsed.TotalSeconds, 0, 0.45f, true);
+				tileColor = Color(
+					(uint8)Math.Lerp(255, tileColor.r, lerp),
+					(uint8)Math.Lerp(255, tileColor.g, lerp),
+					(uint8)Math.Lerp(255, tileColor.b, lerp),
+					255);
+			}
 
 			let tilePos = Vector2(x * (closedTileSize - 1) - TILE_SPACING, y * (closedTileSize - 1) - TILE_SPACING);
 
@@ -2151,33 +2308,14 @@ class Game : Scene
 		}
 
 		// Lose to game transition
-		if (m_State.State == .LoseToGame)
+		if (m_State.State == .LoseToGame || m_State.State == .WinToGame)
 		{
 			let totalTiles = m_Board.Width * m_Board.Height;
-			let delayPerTile = LOSE_TO_NEWGAME_TIME / totalTiles;
-			let lerpDuration = LOSE_TO_NEWGAME_TIME - delayPerTile * (totalTiles - 1);
+			let delayPerTile = CLEARBOARD_TRANSITION_TIME / totalTiles;
+			let lerpDuration = CLEARBOARD_TRANSITION_TIME - delayPerTile * (totalTiles - 1);
 
 			int maxDistance = m_Board.Height + m_Board.Width - 2; // Max distance from (0, 0)
-			let delayPerStep = LOSE_TO_NEWGAME_TIME / (maxDistance + 1); // Time between each wave
-
-			/*
-			for (let y < m_Board.Height)
-			{
-				for (let x < m_Board.Width)
-				{
-					if (m_State.Tiles[x, y] != .Closed)
-					{
-						let startOffset = (x + y * m_Board.Width) * delayPerTile;
-
-						if (m_TimeSinceMineTransition >= startOffset)
-						{
-							let norm = Math.Normalize(m_TimeSinceMineTransition, startOffset, startOffset + lerpDuration, true);
-							drawClosedTile(x, y, Math.Lerp(0.0f, 1.0f, norm));
-						}
-					}
-				}
-			}
-			*/
+			let delayPerStep = CLEARBOARD_TRANSITION_TIME / (maxDistance + 1); // Time between each wave
 
 			var delay = 0.0f;
 			for (int d = 0; d <= maxDistance; d++)
@@ -2192,8 +2330,8 @@ class Game : Scene
 						{
 							if (m_State.Tiles[tile.0, tile.1] != .Closed)
 							{
-								let norm = Math.Normalize(m_TimeSinceMineTransition, startOffset, startOffset + lerpDuration, true);
-								drawClosedTile(tile.0, tile.1, Math.Lerp(0.0f, 1.0f, norm));
+								let norm = Math.Normalize(m_TimeSinceMineTransition, startOffset, startOffset + lerpDuration + CLEARBOARD_TILE_LENGTH_PADDING, true);
+								drawClosedTile(tile.0, tile.1, Math.Lerp(0.0f, 1.0f, EasingFunctions.OutExpo(norm)));
 							}
 						}
 					}
