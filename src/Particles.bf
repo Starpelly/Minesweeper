@@ -48,7 +48,7 @@ class OpenedTileParticle : Particle
 
 		gravity = Math.RandomFloat32(10.5f, 16.3f) * 64;
 		m_Velocity.x = (Game.Random.Next(0, 2) == 0 ? -1 : 1) * Math.RandomFloat32(48, 85);
-		m_Velocity.y = -290;
+		m_Velocity.y = Math.RandomFloat32(-260, -210);
 	}
 
 	public override void Update()

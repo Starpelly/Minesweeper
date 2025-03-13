@@ -14,6 +14,19 @@ public static struct Data
 		public static uint8[?] Boxsubmus = Compiler.ReadBinary("assets/sprites/boxsubmus.png");
 		public static uint8[?] Cloud = Compiler.ReadBinary("assets/sprites/cloud.png");
 		public static uint8[?] Logo = Compiler.ReadBinary("assets/sprites/logo.png");
+
+		public static uint8[?] Logo_0 = Compiler.ReadBinary("assets/sprites/logo_char_1.png");
+		public static uint8[?] Logo_1 = Compiler.ReadBinary("assets/sprites/logo_char_2.png");
+		public static uint8[?] Logo_2 = Compiler.ReadBinary("assets/sprites/logo_char_3.png");
+		public static uint8[?] Logo_3 = Compiler.ReadBinary("assets/sprites/logo_char_4.png");
+		public static uint8[?] Logo_4 = Compiler.ReadBinary("assets/sprites/logo_char_5.png");
+		public static uint8[?] Logo_5 = Compiler.ReadBinary("assets/sprites/logo_char_6.png");
+		public static uint8[?] Logo_6 = Compiler.ReadBinary("assets/sprites/logo_char_7.png");
+		public static uint8[?] Logo_7 = Compiler.ReadBinary("assets/sprites/logo_char_8.png");
+		public static uint8[?] Logo_8 = Compiler.ReadBinary("assets/sprites/logo_char_9.png");
+		public static uint8[?] Logo_9 = Compiler.ReadBinary("assets/sprites/logo_char_10.png");
+		public static uint8[?] Logo_10 = Compiler.ReadBinary("assets/sprites/logo_char_11.png");
+		public static uint8[?] Logo_11 = Compiler.ReadBinary("assets/sprites/logo_char_12.png");
 	}
 
 	public static struct Sounds
@@ -27,6 +40,8 @@ public static struct Data
 		public static uint8[?] FailedChord = Compiler.ReadBinary("assets/sounds/failed-chord.wav");
 		public static uint8[?] Hover = Compiler.ReadBinary("assets/sounds/hover.wav");
 		public static uint8[?] Splashscreen = Compiler.ReadBinary("assets/sounds/boxsubmus-splash.wav");
+		public static uint8[?] StartGame = Compiler.ReadBinary("assets/sounds/startgame.wav");
+		public static uint8[?] LoseTransition = Compiler.ReadBinary("assets/sounds/lose-transition.wav");
 		// public static uint8[?] GameOver = Compiler.ReadBinary("assets/sounds/gameover.wav");
 	}
 
@@ -144,6 +159,19 @@ public class AssetManager
 		public readonly TextureEx Boxsubmus = new .(&Data.Textures.Boxsubmus, Data.Textures.Boxsubmus.Count, .TEXTURE_FILTER_BILINEAR) ~ delete _;
 		public readonly TextureEx Cloud = new .(&Data.Textures.Cloud, Data.Textures.Cloud.Count) ~ delete _;
 		public readonly TextureEx Logo = new .(&Data.Textures.Logo, Data.Textures.Logo.Count) ~ delete _;
+
+		public readonly TextureEx Logo_Char_0 = new .(&Data.Textures.Logo_0, Data.Textures.Logo_0.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_1 = new .(&Data.Textures.Logo_1, Data.Textures.Logo_1.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_2 = new .(&Data.Textures.Logo_2, Data.Textures.Logo_2.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_3 = new .(&Data.Textures.Logo_3, Data.Textures.Logo_3.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_4 = new .(&Data.Textures.Logo_4, Data.Textures.Logo_4.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_5 = new .(&Data.Textures.Logo_5, Data.Textures.Logo_5.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_6 = new .(&Data.Textures.Logo_6, Data.Textures.Logo_6.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_7 = new .(&Data.Textures.Logo_7, Data.Textures.Logo_7.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_8 = new .(&Data.Textures.Logo_8, Data.Textures.Logo_8.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_9 = new .(&Data.Textures.Logo_9, Data.Textures.Logo_9.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_10 = new .(&Data.Textures.Logo_10, Data.Textures.Logo_10.Count) ~ delete _;
+		public readonly TextureEx Logo_Char_11 = new .(&Data.Textures.Logo_11, Data.Textures.Logo_11.Count) ~ delete _;
 	}
 
 	public class Sounds
@@ -157,6 +185,8 @@ public class AssetManager
 		public readonly SoundFX FailedChord = new .(&Data.Sounds.FailedChord, Data.Sounds.FailedChord.Count) ~ delete _;
 		public readonly SoundFX Hover = new .(&Data.Sounds.Hover, Data.Sounds.Hover.Count) ~ delete _;
 		public readonly SoundFX Splashscreen = new .(&Data.Sounds.Splashscreen, Data.Sounds.Splashscreen.Count) ~ delete _;
+		public readonly SoundFX StartGame = new .(&Data.Sounds.StartGame, Data.Sounds.StartGame.Count) ~ delete _;
+		public readonly SoundFX LoseTransition = new .(&Data.Sounds.LoseTransition, Data.Sounds.LoseTransition.Count) ~ delete _;
 		// public readonly SoundFX GameOver = new .(&Data.Sounds.GameOver, Data.Sounds.GameOver.Count) ~ delete _;
 	}
 
