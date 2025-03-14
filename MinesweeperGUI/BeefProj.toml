@@ -5,3 +5,11 @@ Dependencies = {corlib = "*", MinesweeperLibrary = "*"}
 Name = "MinesweeperGUI"
 TargetType = "BeefGUIApplication"
 StartupObject = "MinesweeperGUI.Program"
+
+[Platform.Windows]
+IconFile = "$(WorkspaceDir)/assets/icon.ico"
+Description = "Minesweeper with levels"
+Product = "Minesweeper+"
+Copyright = "© Boxsubmus"
+FileVersion = "1.0.0.0"
+ProductVersion = "1.0.0.0"

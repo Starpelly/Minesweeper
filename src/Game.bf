@@ -20,10 +20,12 @@ class Game : Scene
 
 	private static float BASE_CAMERA_ZOOM => 4.0f;
 
-	private let TILE_COLOR_0 = Color(38, 92, 66, 255);
-	private let TILE_COLOR_1 = Color(99, 199, 77, 255);
+	private const Color TILE_COLOR_0 = .(38, 92, 66, 255);
+	private const Color TILE_COLOR_1 = .(99, 199, 77, 255);
 
-	private let BG_CLEAR_COLOR = Color(90, 105, 136, 255);
+	private const Color BG_CLEAR_COLOR = .(90, 105, 136, 255);
+
+	private const Color CLOUDS_COLOR = Color(122, 144, 181, 255);
 
 	private const uint32 TILE_SIZE = 16;
 	private const uint32 TILE_SPACING = 1;
@@ -368,15 +370,11 @@ class Game : Scene
 
 	private void RandomizeCloudX(ref Cloud cloud)
 	{
-		let textureWidth = Assets.Textures.Cloud.Texture.width;
-
 		cloud.Position.x = Math.RandomFloat32(minCloudX(), maxCloudX());
 	}
 
 	private void RandomizeCloudY(ref Cloud cloud)
 	{
-		let textureHeight = Assets.Textures.Cloud.Texture.height;
-
 		cloud.Position.y = Math.RandomFloat32(minCloudY(), maxCloudY());
 	}
 
@@ -1244,7 +1242,6 @@ class Game : Scene
 		// Update background clouds
 		{
 			let cloudWidth = Assets.Textures.Cloud.Texture.width;
-			let cloudHeight = Assets.Textures.Cloud.Texture.height;
 
 			for (var cloud in ref m_BGClouds)
 			{
@@ -1895,8 +1892,6 @@ class Game : Scene
 
 						let textOffsetX = 32 + 2;
 
-						let position = Vector2(textOffsetX, posY + 6);
-
 						// drawAngledSideBar(.(0, position.y - 6), .(width, barHeight), .(35, 35, 35, 255));
 
 						// Raylib.DrawRectangleRec(.(0, posY, 120 + 4, 32), .(25, 25, 25, 150));
@@ -2120,13 +2115,10 @@ class Game : Scene
 		// Draw clouds
 		let bgDrawCam = Camera2D(m_BGOffset + (m_CamShakeInfluence * 0.35f), .(-(BASE_SCREEN_WIDTH / m_BGCamera.zoom) / 2, -(BASE_SCREEN_HEIGHT / m_BGCamera.zoom) / 2), 0, ((float)SCREEN_WIDTH / (float)BASE_SCREEN_WIDTH) * m_BGCamera.zoom);
 		{
-			let altCloudColor = Color(122, 144, 181, 255);
-			let cloudColor = Color(168, 188, 221, 255);
-
 			Raylib.BeginMode2D(bgDrawCam);
 			for (let cloud in m_BGClouds)
 			{
-				Raylib.DrawTextureEx(Assets.Textures.Cloud.Texture, cloud.Position, 0, 1, altCloudColor);
+				Raylib.DrawTextureEx(Assets.Textures.Cloud.Texture, cloud.Position, 0, 1, CLOUDS_COLOR);
 			}
 			Raylib.EndMode2D();
 		}
@@ -2262,8 +2254,6 @@ class Game : Scene
 
 		void drawMineTile(int x, int y)
 		{
-			let drawPos = getTileDrawPosCenter(x, y);
-
 			Raylib.DrawRectangleRec(.(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING), TILE_SIZE, TILE_SIZE), .(210, 45, 31, 255));
 			// Raylib.DrawCircleV(drawPos, (TILE_SIZE * 0.5f) - 4, Color.Black);
 			Raylib.DrawTextureRec(Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), .(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING)) - .(0, 0), .White);
@@ -2358,7 +2348,7 @@ class Game : Scene
 			Raylib.DrawRectangleRec(.((x + offsetX) * (TILE_SIZE + TILE_SPACING), (y + offsetY) * (TILE_SIZE + TILE_SPACING), TILE_SIZE, TILE_SIZE), .(color.r, color.g, color.b, 150));
 		}
 
-		// Test
+		// Cursor outline helper
 		if (m_State.State == .Game)
 		{
 			for (int d < 8)

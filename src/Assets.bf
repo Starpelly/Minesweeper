@@ -4,6 +4,8 @@ namespace Minesweeper;
 
 public static struct Data
 {
+	public static uint8[?] WindowIcon = Compiler.ReadBinary("assets/icon.png");
+
 	public static struct Textures
 	{
 		public static uint8[?] Flags = Compiler.ReadBinary("assets/sprites/flags.png");

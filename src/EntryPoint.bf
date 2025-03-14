@@ -82,6 +82,14 @@ class EntryPoint
 
 		Raylib.SetConfigFlags(flags);
 		Raylib.InitWindow(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT, "Minesweeper+");
+
+		// Load window icon
+		{
+			let iconPng = Raylib.LoadImageFromMemory(".png", (char8*)&Data.WindowIcon, Data.WindowIcon.Count);
+			Raylib.SetWindowIcon(iconPng);
+			Raylib.UnloadImage(iconPng);
+
+		}
 		Raylib.InitAudioDevice();
 
 		Raylib.SetExitKey(.KEY_NULL);
