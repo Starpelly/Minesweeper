@@ -37,7 +37,7 @@ class Game : Scene
 
 	private const float SECONDS_PER_COMBO = 4.0f;
 	private const float SECONDS_PER_COMBO_DECREMENTING = 2.0f;
-	private const uint CLEARS_PER_COMBO = 8;
+	private const uint TILES_PER_COMBO = 8;
 
 	private const float TIME_BETWEEN_BOARDS_WIN = 0.5f;
 	private const float TIME_BETWEEN_BOARDS_FAIL = 2.45f - 0.5f;
@@ -206,6 +206,8 @@ class Game : Scene
 		public uint TileType = 0;
 
 		public bool WaitingForFirstClick = false;
+
+		public bool MineOverflow = false; // If true, no guessing is switched off.
 
 		public GameState State = .Game;
 
@@ -440,12 +442,13 @@ class Game : Scene
 
 	public void MakeStage(uint stage)
 	{
-		uint startMineCount = DEFAULT_BOARD_MINES + m_State.StartMineAdd;
-
 		let newBoardWidth = (int)Math.Clamp(m_State.NextColumnCount, DEFAULT_BOARD_WIDTH, 30);
 		let newBoardHeight = (int)Math.Clamp(m_State.NextRowCount, DEFAULT_BOARD_HEIGHT, 16);
 
-		let maxMinesCount = (uint)Math.Floor((newBoardWidth * newBoardHeight) * 0.3f); // 30% of the total board area
+		let minMinesCount = (uint)Math.Floor(newBoardWidth * newBoardHeight * 0.1f); // 10% of the total board area
+		let startMineCount = minMinesCount + m_State.StartMineAdd;
+
+		let maxMinesCount = (uint)Math.Floor(newBoardWidth * newBoardHeight * 0.3f); // 30% of the total board area
 		let newMineCount = Math.Clamp(startMineCount, startMineCount, maxMinesCount);
 
 		// Console.WriteLine(scope $"Max Mine Count: {maxMinesCount}");
@@ -847,7 +850,7 @@ class Game : Scene
 			m_State.IsPlaying = true;
 			m_State.WaitingForFirstClick = false;
 
-			if (NO_GUESSING)
+			if (NO_GUESSING && !m_State.MineOverflow)
 			{
 				bool Solve()
 				{
@@ -888,24 +891,39 @@ class Game : Scene
 				}
 	
 				bool solved = false;
+				int failCount = 0;
+				bool success = true;
+
 				while (!solved)
 				{
-					GenerateMines(x, y);
-					solved = Solve();
+					if (failCount >= 20) // The solver can fail 20 times before we give up
+					{
+						m_State.MineOverflow = true;
+						GenerateMines(x, y);
+
+						success = false;
+						break;
+					}
+					else
+					{
+						GenerateMines(x, y);
+						solved = Solve();
+					}
+					failCount++;
 				}
 	
 				// Hide all tiles again
-				for (var tile in ref m_State.Tiles)
+				if (success)
 				{
-					tile = .Closed;
+					for (var tile in ref m_State.Tiles)
+					{
+						tile = .Closed;
+					}
 				}
 			}
 			else
 			{
-				if (m_State.WaitingForFirstClick)
-				{
-					GenerateMines(x, y);
-				}
+				GenerateMines(x, y);
 			}
 
 			m_State.SessionTimer.Start();
@@ -1018,7 +1036,7 @@ class Game : Scene
 		m_State.Points += points;
 
 		m_State.ComboIncrementor++;
-		if (m_State.ComboIncrementor >= CLEARS_PER_COMBO)
+		if (m_State.ComboIncrementor >= TILES_PER_COMBO)
 		{
 			m_State.ComboMult++;
 			m_State.ComboIncrementor = 0;
@@ -1042,6 +1060,8 @@ class Game : Scene
 		{
 			m_State.NextColumnCount++;
 			m_State.NextPointsForWidthAdd += (float)POINTS_PER_BOARD_COLUMN;
+
+			Console.WriteLine(m_State.NextPointsForWidthAdd);
 
 			m_State.SecondsToNewMine *= 0.75f;
 			m_State.SecondsToNewMine = Math.Clamp(m_State.SecondsToNewMine, SECONDS_PER_MINE_MIN, SECONDS_PER_MINE_MAX);
@@ -1089,6 +1109,8 @@ class Game : Scene
 		m_State.NextPointsForHeightAdd = (float)POINTS_PER_BOARD_ROW;
 
 		m_State.TileType = DEFAULT_TILE_TYPE;
+
+		m_State.MineOverflow = false;
 
 		MakeStage(m_State.Stage);
 		centerCamera();
@@ -1815,7 +1837,7 @@ class Game : Scene
 				DrawText(txt, txtPos, .Big, .Outline, uiAlpha);
 
 				// Draw version
-				DrawText(scope $"v{GameVerison.Major}.{GameVerison.Minor}.{GameVerison.Revision}", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(UI_SCREEN_WIDTH - 38, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
+				DrawText(scope $"v{GameVerison.Major}.{GameVerison.Minor}.{GameVerison.Build}", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(UI_SCREEN_WIDTH - 38, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
 
 				// Attribution
 				DrawText(scope $"Created by Starpelly", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(4, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
