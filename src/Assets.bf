@@ -45,18 +45,12 @@ public static struct Data
 		public static uint8[?] StartGame = Compiler.ReadBinary("assets/sounds/startgame.wav");
 		public static uint8[?] LoseTransition = Compiler.ReadBinary("assets/sounds/lose-transition.wav");
 		public static uint8[?] Restart = Compiler.ReadBinary("assets/sounds/restart.wav");
-		// public static uint8[?] GameOver = Compiler.ReadBinary("assets/sounds/gameover.wav");
 	}
 
 	public static struct Fonts
 	{
 		public static uint8[?] NokiaAtlas = Compiler.ReadBinary("assets/fonts/nokia.png");
 		public static uint8[?] NokiaOutlineAtlas = Compiler.ReadBinary("assets/fonts/nokia_outline.png");
-	}
-
-	public static struct Shaders
-	{
-		public static String GrayscaleCode = Compiler.ReadText("assets/shaders/grayscale.fs");
 	}
 }
 
@@ -191,7 +185,6 @@ public class AssetManager
 		public readonly SoundFX StartGame = new .(&Data.Sounds.StartGame, Data.Sounds.StartGame.Count) ~ delete _;
 		public readonly SoundFX LoseTransition = new .(&Data.Sounds.LoseTransition, Data.Sounds.LoseTransition.Count) ~ delete _;
 		public readonly SoundFX Restart = new .(&Data.Sounds.Restart, Data.Sounds.Restart.Count) ~ delete _;
-		// public readonly SoundFX GameOver = new .(&Data.Sounds.GameOver, Data.Sounds.GameOver.Count) ~ delete _;
 	}
 
 	public class Fonts
@@ -200,15 +193,9 @@ public class AssetManager
 		public readonly FontEx NokiaOutline = new .(&Data.Fonts.NokiaOutlineAtlas, Data.Fonts.NokiaOutlineAtlas.Count, 20, true) ~ delete _;
 	}
 
-	public class Shaders
-	{
-		// public readonly Shader Grayscale = new .(null, Data.Shaders.GrayscaleCode) ~ delete _;
-	}
-
 	public Textures Textures = new .() ~ delete _;
 	public Sounds Sounds = new .() ~ delete _;
 	public Fonts Fonts = new .() ~ delete _;
-	public Shaders Shaders = new .() ~ delete _;
 
 	public this()
 	{
