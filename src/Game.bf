@@ -24,8 +24,10 @@ class Game : Scene
 	private const Color TILE_COLOR_1 = .(99, 199, 77, 255);
 
 	private const Color BG_CLEAR_COLOR = .(90, 105, 136, 255);
+	private const Color BG_CLEAR_COLOR_OVERFLOW = .(199, 178, 154, 255);
 
 	private const Color CLOUDS_COLOR = Color(122, 144, 181, 255);
+	private const Color CLOUDS_COLOR_OVERFLOW = Color(208, 209, 188, 255);
 
 	private const uint32 TILE_SIZE = 16;
 	private const uint32 TILE_SPACING = 1;
@@ -281,6 +283,8 @@ class Game : Scene
 
 	private float m_SceneTime = 0.0f;
 
+	private float m_TimeSinceMineOverflow = 0.0f;
+
 	private enum UIState
 	{
 		Title,
@@ -414,6 +418,9 @@ class Game : Scene
 				m_BGClouds.Add(cloud);
 			}
 		}
+
+		m_ClearColor = BG_CLEAR_COLOR;
+		m_CloudColor = CLOUDS_COLOR;
 
 		RestartGame();
 	}
@@ -896,7 +903,7 @@ class Game : Scene
 
 				while (!solved)
 				{
-					if (failCount >= 20) // The solver can fail 20 times before we give up
+					if (failCount >= 400) // The solver can fail 20 times before we give up
 					{
 						m_State.MineOverflow = true;
 						GenerateMines(x, y);
@@ -1111,6 +1118,7 @@ class Game : Scene
 		m_State.TileType = DEFAULT_TILE_TYPE;
 
 		m_State.MineOverflow = false;
+		m_TimeSinceMineOverflow = 0.0f;
 
 		MakeStage(m_State.Stage);
 		centerCamera();
@@ -1137,8 +1145,9 @@ class Game : Scene
 		m_SceneTime += Raylib.GetFrameTime();
 		m_TimeSinceUIStateChange += Raylib.GetFrameTime();
 		m_TimeSinceGameRestart += Raylib.GetFrameTime();
+		m_TimeSinceMineOverflow += Raylib.GetFrameTime();
 
-		#if DEBUG
+#if DEBUG
 		// Debug: Restart game
 		if (Raylib.IsKeyPressed(.KEY_R))
 		{
@@ -1221,6 +1230,13 @@ class Game : Scene
 				RandomizeCloudY(ref cloud);
 				RandomizeCloudSpeed(ref cloud);
 			}
+		}
+
+		// Debug: Toggle Mine overflow
+		if (Raylib.IsKeyPressed(.KEY_O))
+		{
+			m_State.MineOverflow = !m_State.MineOverflow;
+			m_TimeSinceMineOverflow = 0.0f;
 		}
 #endif
 
@@ -2015,7 +2031,6 @@ class Game : Scene
 					}
 				}
 
-
 				// Lives
 				{
 					// drawAngledSideBarLeft(.(0, UI_SCREEN_HEIGHT - 32), .(170, 32), .(25, 25, 25, 255));
@@ -2031,6 +2046,26 @@ class Game : Scene
 						// Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec - .(2, -2, 0, 0), .Zero, 0, .Shadow);
 						Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec, .Zero, 0, .White);
 					}
+				}
+
+				if (m_State.MineOverflow)
+				{
+					let txt = scope $"Mine overflow! No guessing is disabled!";
+					let txtPos = Vector2((UI_SCREEN_WIDTH / 2) - (MeasureText(txt, .Small).x * 0.5f) - 0.5f, UI_SCREEN_HEIGHT - 28);
+
+					var charX = 0.0f;
+					for (let i < txt.Length)
+					{
+						let char = txt[i].ToString(.. scope .());
+						let charWidth = MeasureText(char, .Small).x;
+
+
+						DrawText(char, txtPos + .(charX, (float)Math.Sin((Raylib.GetTime() + (i * 0.1f)) * 4)), .Small, .Outline);
+
+						charX += charWidth;
+					}
+
+					// DrawText(txt, .((UI_SCREEN_WIDTH / 2) - (MeasureText(txt, .Small).x * 0.5f) - 0.5f, UI_SCREEN_HEIGHT - 24), .Small, .Outline);
 				}
 			}
 			Raylib.EndMode2D();
@@ -2101,14 +2136,21 @@ class Game : Scene
 	}
 
 	private Vector2 m_BGOffset;
+	private Color m_ClearColor;
+	private Color m_CloudColor;
 
 	private void renderBackground()
 	{
 		let bgWidth = SCREEN_WIDTH;
 		let bgHeight = SCREEN_HEIGHT;
 
-		let clearColor = BG_CLEAR_COLOR;
-		Raylib.ClearBackground(BG_CLEAR_COLOR);
+		let targetClearColor = m_State.MineOverflow ? BG_CLEAR_COLOR_OVERFLOW : BG_CLEAR_COLOR;
+		let targetCloudColor = m_State.MineOverflow ? CLOUDS_COLOR_OVERFLOW : CLOUDS_COLOR;
+
+		m_ClearColor = Color.Lerp(m_ClearColor, targetClearColor, Raylib.GetFrameTime() * 10.0f);
+		m_CloudColor = Color.Lerp(m_CloudColor, targetCloudColor, Raylib.GetFrameTime() * 10.0f);
+
+		Raylib.ClearBackground(m_ClearColor);
 
 		var checkerOffsetX = (float)Raylib.GetTime() * 10;
 		var checkerOffsetY = (float)Raylib.GetTime() * 0;
@@ -2129,7 +2171,7 @@ class Game : Scene
 					let xpos = (x * BG_CHECKER_SIZE) - checkerBoardOffset.x;
 					let ypos = (y * BG_CHECKER_SIZE) - checkerBoardOffset.y;
 
-					Raylib.DrawRectangleRec(.(xpos, ypos, BG_CHECKER_SIZE, BG_CHECKER_SIZE), Color(0, 0, 50, 8));
+					Raylib.DrawRectangleRec(.(xpos, ypos, BG_CHECKER_SIZE, BG_CHECKER_SIZE), m_State.MineOverflow ? Color(150, 0, 0, 6) : Color(0, 0, 50, 6));
 				}
 			}
 		}
@@ -2140,12 +2182,12 @@ class Game : Scene
 			Raylib.BeginMode2D(bgDrawCam);
 			for (let cloud in m_BGClouds)
 			{
-				Raylib.DrawTextureEx(Assets.Textures.Cloud.Texture, cloud.Position, 0, 1, CLOUDS_COLOR);
+				Raylib.DrawTextureEx(Assets.Textures.Cloud.Texture, cloud.Position, 0, 1, m_CloudColor);
 			}
 			Raylib.EndMode2D();
 		}
 
-		Raylib.DrawRectangleGradientV(0, 0, bgWidth, bgHeight + 120, .(clearColor.r, clearColor.g, clearColor.b, 0), clearColor);
+		Raylib.DrawRectangleGradientV(0, 0, bgWidth, bgHeight + 120, .(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b, 0), m_ClearColor);
 	}
 
 	private void renderBoard()

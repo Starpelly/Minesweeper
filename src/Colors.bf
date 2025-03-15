@@ -1,3 +1,4 @@
+using System;
 namespace RaylibBeef;
 
 public struct Vector2I
@@ -64,4 +65,9 @@ extension Color
 	public static Color ScreenFade => .(25, 25, 25, 255);
 
 	public static Color DarkOutline => .Black;
+
+	public static Color Lerp(Color a, Color b, float t)
+	{
+		return .((uint8)Math.Lerp(a.r, b.r, t), (uint8)Math.Lerp(a.g, b.g, t), (uint8)Math.Lerp(a.b, b.b, t), (uint8)Math.Lerp(a.a, b.a, t));
+	}
 }
