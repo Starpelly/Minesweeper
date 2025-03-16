@@ -29,5 +29,5 @@ static
 	public static float SCREEN_ASPECT_RATIO => (float)BASE_SCREEN_WIDTH / (float)BASE_SCREEN_HEIGHT;
 #endif
 
-	public const Version GameVerison = .(1, 0, 1);
+	public const Version GameVerison = .(1, 0, 2);
 }

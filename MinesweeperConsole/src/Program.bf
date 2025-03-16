@@ -7,6 +7,7 @@ class Program
 {
 	public static void Main(String[] args)
 	{
-		Minesweeper.EntryPoint.Start(args);
+		let entry = scope EntryPoint();
+		entry.Start(args);
 	}
 }

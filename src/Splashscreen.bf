@@ -71,15 +71,17 @@ class Splashscreen : Scene
 			var logoScaleInfluence = 1.0f;
 
 			// Bounce in
+			/*
 			{
-				// let length = 1f;
-				// let offset = SPLASHSCREEN_DELAY;
+				let length = 1f;
+				let offset = SPLASHSCREEN_DELAY;
 
-				// let time = Math.Clamp(m_SceneTime, offset, offset + length);
-				// let ease = EasingFunctions.OutElastic(Math.Normalize(time, offset, offset + length), 0.56f);
+				let time = Math.Clamp(m_SceneTime, offset, offset + length);
+				let ease = EasingFunctions.OutElastic(Math.Normalize(time, offset, offset + length), 0.56f);
 
-				// logoScaleInfluence = Math.Lerp(0.0f, 1.0f, ease);
+				logoScaleInfluence = Math.Lerp(0.0f, 1.0f, ease);
 			}
+			*/
 
 			// Draw the logo
 			{

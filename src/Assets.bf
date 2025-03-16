@@ -29,6 +29,9 @@ public static struct Data
 		public static uint8[?] Logo_9 = Compiler.ReadBinary("assets/sprites/logo_char_10.png");
 		public static uint8[?] Logo_10 = Compiler.ReadBinary("assets/sprites/logo_char_11.png");
 		public static uint8[?] Logo_11 = Compiler.ReadBinary("assets/sprites/logo_char_12.png");
+
+		public static uint8[?] Cursors = Compiler.ReadBinary("assets/sprites/cursors.png");
+		public static uint8[?] AndroidModeButtons = Compiler.ReadBinary("assets/sprites/mode_buttons.png");
 	}
 
 	public static struct Sounds
@@ -169,6 +172,9 @@ public class AssetManager
 		public readonly TextureEx Logo_Char_9 = new .(&Data.Textures.Logo_9, Data.Textures.Logo_9.Count) ~ delete _;
 		public readonly TextureEx Logo_Char_10 = new .(&Data.Textures.Logo_10, Data.Textures.Logo_10.Count) ~ delete _;
 		public readonly TextureEx Logo_Char_11 = new .(&Data.Textures.Logo_11, Data.Textures.Logo_11.Count) ~ delete _;
+
+		public readonly TextureEx Cursors = new .(&Data.Textures.Cursors, Data.Textures.Cursors.Count) ~ delete _;
+		public readonly TextureEx AndroidModeButtons = new .(&Data.Textures.AndroidModeButtons, Data.Textures.AndroidModeButtons.Count) ~ delete _;
 	}
 
 	public class Sounds

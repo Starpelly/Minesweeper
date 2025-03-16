@@ -1,0 +1,5 @@
+FileVersion = 1
+Projects = {MinesweeperAndroid = {Path = "."}, MinesweeperLibrary = {Path = "../.."}, raylib-beef = {Path = "../../vendor/raylib-beef/raylib-beef"}}
+
+[Workspace]
+StartupProject = "MinesweeperAndroid"

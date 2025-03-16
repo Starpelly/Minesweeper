@@ -46,42 +46,62 @@ class EntryPoint
 	}
 #endif
 
-	private static Scene s_CurrentScene ~ delete _;
-	private static SceneType s_SceneToSwapTo = .Null;
-	private static bool s_SwappingScene = false;
+	private Scene s_CurrentScene ~ delete _;
+	private SceneType s_SceneToSwapTo = .Null;
+	private bool s_SwappingScene = false;
 
 #if !GAME_SCREEN_FREE
-	private static RenderTexture s_ScreenTexture;
+	private RenderTexture s_ScreenTexture;
 #endif
 
-	private static Vector2 s_MousePositionViewport = .Zero;
-	private static Vector2 s_ViewportSize = .Zero;
-	private static int s_ViewportScale = 1;
+	private Vector2 m_MousePositionViewport = .Zero;
+	private Vector2 m_ViewportSize = .Zero;
+	private int m_ViewportScale = 1;
 
-	public static Vector2 MousePositionViewport => s_MousePositionViewport;
-	public static Vector2 ViewportSize => s_ViewportSize;
-	public static int ViewportScale => s_ViewportScale;
+	public int ViewportScale => m_ViewportScale;
 
-	private static Vector2 s_LastViewportSize = .(0, 0);
+	private Vector2 s_LastViewportSize = .(0, 0);
+
+	private static EntryPoint Instance { get; private set; }
 
 	public static void SetScene<T>() where T : Scene
 	{
-		s_SwappingScene = true;
+		Instance.s_SwappingScene = true;
 		if (typeof(T) == typeof(Splashscreen))
-			s_SceneToSwapTo = .Splashscreen;
+			Instance.s_SceneToSwapTo = .Splashscreen;
 		else if (typeof(T) == typeof(Game))
-			s_SceneToSwapTo = .Game;
+			Instance.s_SceneToSwapTo = .Game;
 	}
 
-	public static void Start(String[] args)
+	public this()
 	{
-		ConfigFlags flags = .FLAG_VSYNC_HINT | .FLAG_WINDOW_RESIZABLE;
-#if GAME_SCREEN_FREE
-#endif
+		Instance = this;
+	}
+
+	public static Vector2 GetMousePositionViewport()
+	{
+		return Instance.m_MousePositionViewport;
+	}
+
+	public static int GetViewportScale()
+	{
+		return Instance.ViewportScale;
+	}
+
+	public void Start(String[] args)
+	{
+		ConfigFlags flags = .FLAG_VSYNC_HINT;
 		flags |= .FLAG_MSAA_4X_HINT;
+
+#if BF_PLATFORM_ANDROID
+		Raylib.SetConfigFlags(flags);
+		Raylib.InitWindow(0, 0, "Minesweeper+");
+#else
+		flags |= .FLAG_WINDOW_RESIZABLE;
 
 		Raylib.SetConfigFlags(flags);
 		Raylib.InitWindow(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT, "Minesweeper+");
+#endif
 
 		// Load window icon
 		{
@@ -110,7 +130,7 @@ class EntryPoint
 #endif
 		InitAssets();
 
-#if DEBUG
+#if DEBUG && !BF_PLATFORM_ANDROID
 		SetScene<Game>();
 #else
 		SetScene<Splashscreen>();
@@ -136,7 +156,7 @@ class EntryPoint
 		Raylib.CloseWindow();
 	}
 
-	private static void Loop()
+	private void Loop()
 	{
 		// Swap scene
 		if (s_SwappingScene == true)
@@ -161,10 +181,10 @@ class EntryPoint
 		let viewportSize = getLargestSizeForViewport();
 		let viewportPos = getCenteredPositionForViewport(viewportSize);
 
-		s_ViewportSize = viewportSize;
-		s_ViewportScale =(int)(viewportSize.x / SCREEN_WIDTH);
+		m_ViewportSize = viewportSize;
+		m_ViewportScale =(int)(viewportSize.x / SCREEN_WIDTH);
 
-		if (s_ViewportSize != s_LastViewportSize)
+		if (m_ViewportSize != s_LastViewportSize)
 		{
 			if (VIEWPORT_USE_RENDERTEXTURE)
 			{
@@ -172,19 +192,22 @@ class EntryPoint
 				s_ScreenTexture = Raylib.LoadRenderTexture((int32)viewportSize.x, (int32)viewportSize.y);
 			}
 
-			SCREEN_WIDTH = (int32)s_ViewportSize.x;
-			SCREEN_HEIGHT = (int32)s_ViewportSize.y;
+			SCREEN_WIDTH = (int32)m_ViewportSize.x;
+			SCREEN_HEIGHT = (int32)m_ViewportSize.y;
 		}
-		s_LastViewportSize = s_ViewportSize;
+		s_LastViewportSize = m_ViewportSize;
 
 		let relativeMouseX = Raylib.GetMouseX() - viewportPos.x;
 		let relativeMouseY = Raylib.GetMouseY() - viewportPos.y;
-		s_MousePositionViewport = .((relativeMouseX / viewportSize.x) * SCREEN_WIDTH, (relativeMouseY / viewportSize.y) * SCREEN_HEIGHT);
-		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, SCREEN_WIDTH), Math.Clamp(s_MousePositionViewport.y, 0, SCREEN_HEIGHT));
+
+		m_MousePositionViewport = .((relativeMouseX / viewportSize.x), (relativeMouseY / viewportSize.y) );
+		m_MousePositionViewport = .(Math.Clamp(m_MousePositionViewport.x, 0, 1), Math.Clamp(m_MousePositionViewport.y, 0, 1));
 
 		s_CurrentScene.Update();
 
 		Raylib.BeginDrawing();
+
+		Raylib.ClearBackground(.Black);
 
 		if (let game = s_CurrentScene as Game)
 		{
@@ -204,6 +227,31 @@ class EntryPoint
 #endif
 
 		s_CurrentScene.Render();
+
+		// Render cursor
+		/*
+		Raylib.HideCursor();
+		Raylib.DrawTexturePro(Assets.Textures.Cursors.Texture,
+			.(239, 103, 14, 15),
+			.(Raylib.GetMousePosition().x, Raylib.GetMousePosition().y, 14 * 2, 15 * 2),
+			.Zero,
+			0,
+			.White);
+		*/
+
+#if DEBUG
+		Text.DrawTextColored(scope $"{Raylib.GetFPS()} FPS", .(20, 20), .Big, .Outline, .Green);
+		Text.DrawTextColored("Running Debug Configuration", .(20, 40), .Big, .Outline, .Green);
+
+#if BF_PLATFORM_ANDROID
+		let platform = "Android";
+#elif BF_PLATFORM_WASM
+		let platform = "Wasm";
+#elif BF_PLATFORM_WINDOWS
+		let platform = "Windows";
+#endif
+		Text.DrawTextColored(scope $"Platform: {platform}", .(20, 60), .Big, .Outline, .Green);
+#endif
 
 #if !GAME_SCREEN_FREE
 		if (VIEWPORT_USE_RENDERTEXTURE)
