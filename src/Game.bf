@@ -2162,6 +2162,8 @@ class Game : Scene
 		checkerOffsetY += m_BGOffset.y;
 
 		let checkerBoardOffset = Vector2(Math.Repeat(checkerOffsetX, BG_CHECKER_SIZE * 2), Math.Repeat(checkerOffsetY, BG_CHECKER_SIZE * 2));
+
+		if (BG_CHECKER_SIZE > 0)
 		for (let y < (bgHeight / BG_CHECKER_SIZE) + 3)
 		{
 			for (let x < (bgWidth / BG_CHECKER_SIZE) + 3)
