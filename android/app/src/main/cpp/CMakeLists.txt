@@ -78,5 +78,5 @@ target_link_libraries(${APP_LIB_NAME} BeefRT)
 # Link the game logic to the native application
 target_link_libraries(${APP_LIB_NAME}
         ${BEEF_PROJECT_PATH}/build/${BEEF_ARCH}/MinesweeperAndroid/MinesweeperAndroid.a
-        # ${APP_LIBS_DIR}/libffi/arm64-v8a/libffi.a
+        ${APP_LIBS_DIR}/${ANDROID_ABI}/libffi.a
 )

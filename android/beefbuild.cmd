@@ -4,8 +4,6 @@
 set BEEF_DIR=%APPDATA%\..\Local\BeefLang\bin
 set WORKSPACE_DIR=MinesweeperAndroid
 
-echo %BEEF_DIR%
-
 echo Building ARM
 %BEEF_DIR%\BeefBuild -config=Debug -platform=armv7-none-linux-androideabi23 -workspace=%WORKSPACE_DIR%
 echo Building ARM64
