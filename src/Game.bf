@@ -1,5 +1,3 @@
-#define BF_PLATFORM_ANDROID
-
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -1305,6 +1303,7 @@ class Game : Scene
 					m_TimeSinceUIStateChange = 0.0f;
 					m_UIState = .Game;
 
+					Raylib.SetSoundVolume(Assets.Sounds.StartGame.Sound, 0.45f);
 					Raylib.PlaySound(Assets.Sounds.StartGame.Sound);
 				}
 			}
