@@ -1,6 +1,9 @@
 FileVersion = 1
 Projects = {MinesweeperLibrary = {Path = "."}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, MinesweeperGUI = {Path = "MinesweeperGUI"}, MinesweeperConsole = {Path = "MinesweeperConsole"}}
 
+[Workspace]
+StartupProject = "MinesweeperGUI"
+
 [Configs.Debug.Win64]
 ConfigSelections = {raylib-beef = {Config = "StaticDebug"}}
 
