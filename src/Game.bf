@@ -1,3 +1,5 @@
+#define BF_PLATFORM_ANDROID
+
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -2069,7 +2071,10 @@ class Game : Scene
 #if BF_PLATFORM_ANDROID
 				{
 					let buttonsPadding = 4;
-					let buttonsScale = 2;
+					let buttonsScale = 1;
+
+					let buttonWidth = 48;
+					let buttonHeight = 48;
 
 					let mousePos = EntryPoint.GetMousePositionViewport() * .(UI_SCREEN_WIDTH, UI_SCREEN_HEIGHT);
 
@@ -2077,33 +2082,48 @@ class Game : Scene
 
 					void drawButton(Android_TapState tapState, int textureIndex, Vector2 position)
 					{
-						var textureIndex;
+						let buttonRect = Rectangle(position.x, position.y, buttonWidth * buttonsScale, buttonHeight * buttonsScale);
+						var active = false;
 
-						let buttonRect = Rectangle(position.x, position.y, 38 * buttonsScale, 38 * buttonsScale);
+						let textureWidth = 32;
+						let textureHeight = 32;
 
 						if (m_TapState == tapState)
-							textureIndex += 2;
+						{
+							active = true;
+						}
 
-						if (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_LEFT))
+						if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
 						{
 							if (mousePos.x >= buttonRect.x && mousePos.x <= buttonRect.x + buttonRect.width
 								&& mousePos.y >= buttonRect.y && mousePos.y <= buttonRect.y + buttonRect.height)
 							{
 								m_TapState = tapState;
+								Raylib.PlaySound(Assets.Sounds.Tap.Sound);
 							}
 						}
 
 						let textureMargin = 2;
+
+						if (active)
+						{
+							Raylib.DrawRectangleRounded(buttonRect, 0.625f / 2, 8, .(255, 255, 255, 175));
+						}
+
 						Raylib.DrawTexturePro(Assets.Textures.AndroidModeButtons.Texture,
-							.(((38 + textureMargin) * textureIndex) + textureMargin, textureMargin, 38, 38),
-							.(position.x, position.y, 38 * buttonsScale, 38 * buttonsScale),
+							.(((textureWidth + textureMargin) * textureIndex) + textureMargin, textureMargin, textureWidth, textureHeight),
+							.(position.x + ((buttonWidth - textureWidth) / 2), position.y + ((buttonHeight - textureHeight) / 2), textureWidth * buttonsScale, textureHeight * buttonsScale),
 							.Zero,
 							0,
-							.White);
+							active ? .(34, 34, 34, 255) : .White);
 					}
 
-					drawButton(.Flag, 1, .(buttonsPadding, UI_SCREEN_HEIGHT - 74 - 32 - buttonsPadding));
-					drawButton(.Open, 0, .(buttonsPadding + (38 * buttonsScale) + 2, UI_SCREEN_HEIGHT - 74 - 32 - buttonsPadding));
+					let sideBarX = 8;
+					let sideBarY = (UI_SCREEN_HEIGHT / 2) - ((buttonWidth * buttonsScale) / 2) + 0.5f;
+					Raylib.DrawRectangleRounded(.(sideBarX, sideBarY, (buttonWidth * buttonsScale) + (buttonsPadding * 2), ((buttonWidth * buttonsScale) * 2) + (buttonsPadding * 2)), 0.625f / 2, 8, .(0, 0, 0, 180));
+
+					drawButton(.Flag, 2, .(sideBarX + buttonsPadding, sideBarY + buttonsPadding));
+					drawButton(.Open, 1, .(sideBarX + buttonsPadding, sideBarY + ((buttonHeight * buttonsScale) * 1) + buttonsPadding));
 				}
 #endif
 			}

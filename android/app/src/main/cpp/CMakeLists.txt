@@ -48,7 +48,7 @@ target_include_directories(${APP_LIB_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/vendor/r
 # Link required libraries to the native application
 target_link_libraries(${APP_LIB_NAME} raylib raymoblib)
 
-set(BEEF_PROJECT_PATH "${CMAKE_SOURCE_DIR}/../../../../MinesweeperAndroid")
+set(BEEF_PROJECT_PATH "${CMAKE_SOURCE_DIR}/../../../../../")
 set(APP_LIBS_DIR "${CMAKE_SOURCE_DIR}/libs/")
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")

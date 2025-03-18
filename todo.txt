@@ -1,0 +1,1 @@
+Fix screen looking weird when launching the game on Android

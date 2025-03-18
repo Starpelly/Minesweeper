@@ -1,8 +1,7 @@
 using System;
-
 using Minesweeper;
 
-namespace BeefAndroid;
+namespace MinesweeperAndroid;
 
 class Program
 {

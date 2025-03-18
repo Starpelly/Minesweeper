@@ -1,5 +1,5 @@
 FileVersion = 1
-Projects = {MinesweeperLibrary = {Path = "."}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, MinesweeperGUI = {Path = "MinesweeperGUI"}, MinesweeperConsole = {Path = "MinesweeperConsole"}}
+Projects = {MinesweeperLibrary = {Path = "."}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, MinesweeperGUI = {Path = "MinesweeperGUI"}, MinesweeperConsole = {Path = "MinesweeperConsole"}, MinesweeperAndroid = {Path = "MinesweeperAndroid"}}
 
 [Workspace]
 StartupProject = "MinesweeperGUI"
