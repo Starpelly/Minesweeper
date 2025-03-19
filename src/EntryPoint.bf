@@ -228,17 +228,6 @@ class EntryPoint
 
 		s_CurrentScene.Render();
 
-		// Render cursor
-#if !BF_PLATFORM_ANDROID
-		Raylib.HideCursor();
-		Raylib.DrawTexturePro(Assets.Textures.Cursors.Texture,
-			.(239, 103, 14, 15),
-			.(Raylib.GetMousePosition().x, Raylib.GetMousePosition().y, 14 * 2, 15 * 2),
-			.Zero,
-			0,
-			.White);
-#endif
-
 #if DEBUG
 		Text.DrawTextColored(scope $"{Raylib.GetFPS()} FPS", .(20, 20), .Big, .Outline, .Green);
 		Text.DrawTextColored("Running Debug Configuration", .(20, 40), .Big, .Outline, .Green);
@@ -272,6 +261,17 @@ class EntryPoint
 			Raylib.EndScissorMode();
 			Rlgl.rlViewport(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
 		}
+#endif
+
+		// Render cursor
+#if !BF_PLATFORM_ANDROID
+		Raylib.HideCursor();
+		Raylib.DrawTexturePro(Assets.Textures.Cursors.Texture,
+			.(239, 103, 14, 15),
+			.(Raylib.GetMousePosition().x, Raylib.GetMousePosition().y, 14 * 2, 15 * 2),
+			.Zero,
+			0,
+			.White);
 #endif
 
 		Raylib.EndDrawing();

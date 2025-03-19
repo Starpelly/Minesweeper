@@ -1,1 +1,2 @@
 Fix screen looking weird when launching the game on Android
+Add a better animation to the board for when it expands in size
