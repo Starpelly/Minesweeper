@@ -690,7 +690,7 @@ class Game : Scene
 			m_State.ComboTimer.Stop();
 			m_State.MineTimer.Stop();
 
-			Raylib.SetSoundVolume(Assets.Sounds.Win.Sound, 0.5f);
+			Raylib.SetSoundVolume(Assets.Sounds.Win.Sound, 0.45f);
 			Raylib.PlaySound(Assets.Sounds.Win.Sound);
 
 			CreateParticle(new WinParticle(.(x * (TILE_SIZE + TILE_SPACING) + + (TILE_SIZE / 2), y * (TILE_SIZE + TILE_SPACING) + (TILE_SIZE / 2))));
@@ -703,14 +703,17 @@ class Game : Scene
 					for (let by < m_Board.Height)
 					{
 						if (!m_State.Cleared[bx, by])
-						if (m_State.Numbers[bx, by] > 0 && !m_State.Mines[bx, by])
-						SolveTile(bx, by);
+						{
+							if (m_State.Numbers[bx, by] > 0 && !m_State.Mines[bx, by])
+								SolveTile(bx, by);
+							else if (m_State.Mines[bx, by] && m_State.Tiles[bx, by] != .Flagged)
+								m_State.Tiles[bx, by] = .Flagged;
+						}
 					}
 				}
 			}
 
 			m_State.NextBoardTimer.Start();
-
 		}
 	}
 
@@ -2179,7 +2182,7 @@ class Game : Scene
 		}
 
 		// Draw clouds
-		let bgDrawCam = Camera2D(m_BGOffset + (m_CamShakeInfluence * 0.35f), .(-(BASE_SCREEN_WIDTH / m_BGCamera.zoom) / 2, -(BASE_SCREEN_HEIGHT / m_BGCamera.zoom) / 2), 0, ((float)SCREEN_WIDTH / (float)BASE_SCREEN_WIDTH) * m_BGCamera.zoom);
+		let bgDrawCam = Camera2D(-m_BGOffset + (m_CamShakeInfluence * 0.35f), .(-(BASE_SCREEN_WIDTH / m_BGCamera.zoom) / 2, -(BASE_SCREEN_HEIGHT / m_BGCamera.zoom) / 2), 0, ((float)SCREEN_WIDTH / (float)BASE_SCREEN_WIDTH) * m_BGCamera.zoom);
 		{
 			Raylib.BeginMode2D(bgDrawCam);
 			for (let cloud in m_BGClouds)
@@ -2260,9 +2263,11 @@ class Game : Scene
 		{
 			let number = m_State.Numbers[x, y];
 			let numStr = number.ToString(.. scope .());
+			let numColor = NUMBER_COLORS[number];
+			let clearedNumColor = Color(numColor.r, numColor.g, numColor.b, 125);
 
 			// Raylib.DrawText(numStr, ((int32)drawPos.x) - 2, ((int32)drawPos.y) - 4, 8, NUMBER_COLORS[number]);
-			DrawTextColored(numStr, .(((int32)drawPos.x) - 3, ((int32)drawPos.y) - 5), .Small, .NoOutline, NUMBER_COLORS[number]);
+			DrawTextColored(numStr, .(((int32)drawPos.x) - 3, ((int32)drawPos.y) - 5), .Small, .NoOutline, m_State.Cleared[x, y] ? clearedNumColor : numColor);
 			// Raylib.DrawTextEx(Assets.Fonts.More15Outline.Font, numStr, .(((int32)drawPos.x) - 5, ((int32)drawPos.y) - 12), 24, 1, .Black);
 		}
 
