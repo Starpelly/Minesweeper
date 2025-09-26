@@ -1,7 +1,7 @@
 using System;
 using Minesweeper;
 
-namespace MinesweeperConsole;
+namespace Minesweeper.Release;
 
 class Program
 {

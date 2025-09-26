@@ -598,6 +598,7 @@ class Game : Scene
 			CreateParticle(new OpenedTileParticle(.(x * (TILE_SIZE + TILE_SPACING), y * (TILE_SIZE + TILE_SPACING)), tileColor));
 			ShakeCamera(1f, 4, 2);
 
+			Raylib.SetSoundPitch(Assets.Sounds.Click.Sound, Math.RandomFloat32(0.985f, 1.02f));
 			Raylib.PlaySound(Assets.Sounds.Click.Sound);
 		}
 
@@ -618,6 +619,8 @@ class Game : Scene
 
 			if (m_State.State == .GameOver)
 			{
+				Newgrounds.PostScore((int)Math.Ceiling(m_State.Points), m_State.ComboMult);
+
 				// Raylib.PlaySound(Assets.Sounds.GameOver.Sound);
 			}
 
@@ -1302,6 +1305,8 @@ class Game : Scene
 			{
 				m_TimeSinceUIStateChange = 0.0f;
 				m_ChangingUIState = true;
+
+				// Newgrounds.PostScore(20);
 			}
 
 			if (m_ChangingUIState)
@@ -1511,7 +1516,7 @@ class Game : Scene
 				{
 					m_State.State = .LoseToGame;
 
-					m_State.ComboMult = 0;
+					m_State.ComboMult = 1;
 					m_State.ComboIncrementor = 0;
 					m_State.ComboTimer.Reset();
 
@@ -2098,6 +2103,10 @@ class Game : Scene
 				let x = Math.Lerp(-UI_SCREEN_WIDTH, 0,
 					EasingFunctions.OutExpo(Math.Normalize(elapsedSeconds - TIME_BETWEEN_BOARDS_GAMEOVER, 0, 0.65f, true)));
 				DrawText(str, .( (UI_SCREEN_WIDTH / 2) - (txtMeasure.x / 2) - x, (UI_SCREEN_HEIGHT / 2) + 44), .Heading, .Outline);
+			}
+			// "Submit score" prompt
+			{
+				// DrawText("Submit score")
 			}
 		}
 

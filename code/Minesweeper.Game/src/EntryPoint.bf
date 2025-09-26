@@ -1,4 +1,5 @@
 using System;
+using System.Interop;
 using RaylibBeef;
 
 namespace Minesweeper;
@@ -15,19 +16,6 @@ class EntryPoint
 	}
 
 #if BF_PLATFORM_WASM
-	[CLink, CallingConvention(.Stdcall)]
-	private static extern void emscripten_console_log(char8* utf8String);
-
-	private function void em_callback_func();
-
-	[CLink, CallingConvention(.Stdcall)]
-	private static extern void emscripten_set_main_loop(em_callback_func func, int32 fps, int32 simulateInfinteLoop);
-
-	[CLink, CallingConvention(.Stdcall)]
-	private static extern int32 emscripten_set_main_loop_timing(int32 mode, int32 value);
-
-	[CLink, CallingConvention(.Stdcall)]
-	private static extern double emscripten_get_now();
 
 	private static void emscriptenMainLoop()
 	{
@@ -44,6 +32,7 @@ class EntryPoint
 			Raylib.EndDrawing();
 		}
 	}
+
 #endif
 
 	private static Scene s_CurrentScene ~ delete _;
@@ -81,6 +70,7 @@ class EntryPoint
 		flags |= .FLAG_MSAA_4X_HINT;
 
 		Raylib.SetConfigFlags(flags);
+		Raylib.SetTraceLogLevel(.LOG_ERROR);
 		Raylib.InitWindow(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT, "Minesweeper+");
 
 		// Load window icon
@@ -115,9 +105,12 @@ class EntryPoint
 #else
 		SetScene<Splashscreen>();
 #endif
-		// s_CurrentScene = scope Game();
 
 #if BF_PLATFORM_WASM
+
+		Newgrounds.Init();
+		Newgrounds.Login();
+
 		emscripten_set_main_loop(=> emscriptenMainLoop, 0, 1);
 #else
 		while (!Raylib.WindowShouldClose())
@@ -131,6 +124,8 @@ class EntryPoint
 #endif
 
 		DestroyAssets();
+
+		// Newgrounds.Logout();
 
 		Raylib.CloseAudioDevice();
 		Raylib.CloseWindow();
@@ -182,7 +177,9 @@ class EntryPoint
 		s_MousePositionViewport = .((relativeMouseX / viewportSize.x) * SCREEN_WIDTH, (relativeMouseY / viewportSize.y) * SCREEN_HEIGHT);
 		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, SCREEN_WIDTH), Math.Clamp(s_MousePositionViewport.y, 0, SCREEN_HEIGHT));
 
-		s_CurrentScene.Update();
+		bool shouldUpdate = true;
+		if (shouldUpdate)
+			s_CurrentScene.Update();
 
 		Raylib.BeginDrawing();
 

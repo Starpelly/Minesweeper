@@ -1,0 +1,7 @@
+FileVersion = 1
+Dependencies = {corlib = "*", Minesweeper = "*"}
+
+[Project]
+Name = "MinesweeperDev"
+StartupObject = "Minesweeper.Dev.Program"
+DefaultNamespace = "Minesweeper.Dev"

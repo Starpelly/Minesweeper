@@ -1,0 +1,3 @@
+Pause game when the focus leaves the game window.
+Add a "Click to focus" scene in Newgrounds builds.
+Encrypt the newgrounds leaderboards stuff

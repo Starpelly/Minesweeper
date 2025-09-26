@@ -1,7 +1,7 @@
 using System;
 using Minesweeper;
 
-namespace MinesweeperGUI;
+namespace Minesweeper.Dev;
 
 class Program
 {
