@@ -1,6 +1,7 @@
 using System;
 using BJSON;
 using BJSON.Enums;
+using BJSON.Models;
 
 namespace Minesweeper;
 
@@ -121,6 +122,22 @@ public static class Newgrounds
 
 		if (!sessionID.IsEmpty && !sessionID.IsNull)
 		{
+			let jsonMain = JsonObject()
+			{
+				("app_id", APP_ID),
+				("session_id", sessionID),
+				("call", JsonObject()
+					{
+						("component", "App.checkSession"),
+						("parameters", JsonObject())
+					}
+				)
+			};
+			defer jsonMain.Dispose();
+
+			let jsonString = Json.Serialize(jsonMain, .. scope .());
+
+			/*
 			let jsonData = scope $"""
 			\{
 			  "app_id": "{APP_ID}",
@@ -132,6 +149,7 @@ public static class Newgrounds
 			  \}
 			\}
 			""";
+			*/
 
 			// NEVER EVER TOUCH STRINGS AFTER CREATING THEM
 			// IT BREAKS THEM!!!
@@ -171,11 +189,28 @@ public static class Newgrounds
 			{
 			}
 
-			postRequest(jsonData, (fetch) => onSuccess(fetch), (fetch) => onError(fetch));
+			postRequest(jsonString, (fetch) => onSuccess(fetch), (fetch) => onError(fetch));
 		}
 		else
 		{
 #if DEBUG
+			let jsonMain = JsonObject()
+			{
+				("app_id", APP_ID),
+				("call", JsonObject()
+					{
+						("component", "App.startSession"),
+						("parameters", JsonObject(){})
+					}
+				)
+			};
+			defer jsonMain.Dispose();
+
+			let jsonString = Json.Serialize(jsonMain, .. scope .());
+
+			Console.WriteLine(jsonString);
+
+			/*
 			let jsonData = scope $"""
 				\{
 				    "app_id": "{APP_ID}",
@@ -185,6 +220,7 @@ public static class Newgrounds
 				    \}
 				\}
 				""";
+			*/
 
 			void onSuccess(emscripten_fetch_t* fetch)
 			{
@@ -216,7 +252,7 @@ public static class Newgrounds
 			{
 			}
 
-			postRequest(jsonData, (fetch) => onSuccess(fetch), (fetch) => onError(fetch));
+			postRequest(jsonString, (fetch) => onSuccess(fetch), (fetch) => onError(fetch));
 #endif
 		}
 #endif
@@ -227,22 +263,49 @@ public static class Newgrounds
 #if NEWGROUNDS
 		if (m_session == null)
 			return;
+		if (points == 0 && combo == 0)
+			return;
 
-		let jsonData = scope $"""
-			\{
-			  "app_id": "{APP_ID}",
-			  "session_id": "{m_session.ID}",
-			  "execute": [
-				\{
-				    "component": "ScoreBoard.postScore",
-				    "parameters": \{
-				      "id": {SCORE_BOARD_ID},
-				      "value": {points}
-				    \}
-				\}
-			  ]
-			\}
-			""";
+		var jsonExecute = JsonArray();
+
+		if (points > 0)
+		{
+			jsonExecute.Add(
+				JsonObject()
+				{
+					("component", "ScoreBoard.postScore"),
+					("parameters", JsonObject()
+						{
+							("id", SCORE_BOARD_ID),
+							("value", points)
+						})
+				}
+			);
+		}
+		if (combo > 0)
+		{
+			jsonExecute.Add(
+				JsonObject()
+				{
+					("component", "ScoreBoard.postScore"),
+					("parameters", JsonObject()
+						{
+							("id", COMBO_BOARD_ID),
+							("value", combo)
+						})
+				}
+			);
+		}
+
+		let jsonMain = JsonObject()
+		{
+			("app_id", APP_ID),
+			("session_id", m_session.ID),
+			("execute", jsonExecute)
+		};
+		defer jsonMain.Dispose();
+
+		let jsonString = Json.Serialize(jsonMain, .. scope .());
 
 		void onSuccess(emscripten_fetch_t* fetch)
 		{
@@ -269,7 +332,7 @@ public static class Newgrounds
 		{
 		}
 
-		postRequest(jsonData, (fetch) => onSuccess(fetch), (fetch) => onError(fetch));
+		postRequest(jsonString, (fetch) => onSuccess(fetch), (fetch) => onError(fetch));
 #endif
 	}
 

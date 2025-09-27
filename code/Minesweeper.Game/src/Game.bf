@@ -619,7 +619,7 @@ class Game : Scene
 
 			if (m_State.State == .GameOver)
 			{
-				Newgrounds.PostScore((int)Math.Ceiling(m_State.Points), m_State.ComboMult);
+				Newgrounds.PostScore((int)Math.Ceiling(m_State.Points), m_SessionHighscore.Combo);
 
 				// Raylib.PlaySound(Assets.Sounds.GameOver.Sound);
 			}

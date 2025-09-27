@@ -1,9 +1,9 @@
 FileVersion = 1
-Projects = {Minesweeper = {Path = "code/Minesweeper.Game"}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, MinesweeperRelease = {Path = "code/Minesweeper.Release"}, MinesweeperDev = {Path = "code/Minesweeper.Dev"}, BJSON = {Path = "vendor/BJSON/BJSON"}, MinesweeperNewgrounds = {Path = "code/Minesweeper.Newgrounds"}}
+Projects = {Minesweeper = {Path = "code/Minesweeper.Game"}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, MinesweeperApp = {Path = "code/Minesweeper.Release"}, MinesweeperDev = {Path = "code/Minesweeper.Dev"}, BJSON = {Path = "vendor/BJSON/BJSON"}, MinesweeperNewgrounds = {Path = "code/Minesweeper.Newgrounds"}}
 WorkspaceFolders = {Dependencies = ["BJSON", "raylib-beef", "corlib"]}
 
 [Workspace]
-StartupProject = "MinesweeperRelease"
+StartupProject = "MinesweeperDev"
 
 [Configs.Debug.Win64]
 ConfigSelections = {raylib-beef = {Config = "StaticDebug"}}
@@ -39,7 +39,7 @@ EnableRealtimeLeakCheck = false
 AllowHotSwapping = false
 IncrementalBuild = false
 COptimizationLevel = "O2"
-ConfigSelections = {raylib-beef = {Config = "StaticRelease"}, Minesweeper = {Config = "Release"}, MinesweeperRelease = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}
+ConfigSelections = {raylib-beef = {Config = "StaticRelease"}, Minesweeper = {Config = "Release"}, MinesweeperApp = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}
 
 [Configs.Newgrounds.Win32]
 Toolset = "LLVM"
@@ -54,11 +54,11 @@ EnableRealtimeLeakCheck = false
 AllowHotSwapping = false
 IncrementalBuild = false
 COptimizationLevel = "O2"
-ConfigSelections = {Minesweeper = {Config = "Release"}, raylib-beef = {Config = "Release"}, MinesweeperRelease = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}
+ConfigSelections = {Minesweeper = {Config = "Release"}, raylib-beef = {Config = "Release"}, MinesweeperApp = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}
 
 [Configs.Newgrounds.wasm32]
 PreprocessorMacros = ["NEWGROUNDS"]
 AllocType = "CRT"
 EnableObjectDebugFlags = false
 EmitObjectAccessCheck = false
-ConfigSelections = {Minesweeper = {Config = "Release"}, raylib-beef = {Config = "Release"}, MinesweeperRelease = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}
+ConfigSelections = {Minesweeper = {Config = "Release"}, raylib-beef = {Config = "Release"}, MinesweeperApp = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}

@@ -2,7 +2,7 @@ FileVersion = 1
 Dependencies = {corlib = "*", Minesweeper = "*"}
 
 [Project]
-Name = "MinesweeperRelease"
+Name = "MinesweeperApp"
 TargetType = "BeefGUIApplication"
 StartupObject = "Minesweeper.Release.Program"
 DefaultNamespace = "Minesweeper.Release"
