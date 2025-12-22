@@ -12,4 +12,3 @@ PreprocessorMacros = ["DEBUG", "NEWGROUNDS"]
 
 [Configs.Release.wasm32]
 OtherLinkFlags = "$(LinkFlags)  -sFETCH=1"
-PostBuildCmds = ["CopyToDependents(\"$(WorkspaceDir)/wasm/index.html\")"]

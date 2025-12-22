@@ -3,7 +3,7 @@ Projects = {Minesweeper = {Path = "code/Minesweeper.Game"}, raylib-beef = {Path 
 WorkspaceFolders = {Dependencies = ["BJSON", "raylib-beef", "corlib"]}
 
 [Workspace]
-StartupProject = "MinesweeperDesktop"
+StartupProject = "MinesweeperWasm"
 
 [Configs.Debug.Win64]
 ConfigSelections = {raylib-beef = {Config = "StaticDebug"}}

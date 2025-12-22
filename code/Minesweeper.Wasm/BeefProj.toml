@@ -6,3 +6,6 @@ Name = "MinesweeperWasm"
 TargetType = "BeefGUIApplication"
 StartupObject = "Minesweeper.Wasm.Program"
 DefaultNamespace = "Minesweeper.Wasm"
+
+[Configs.Release.wasm32]
+PostBuildCmds = ["CopyFilesIfNewer(\"$(WorkspaceDir)/wasm/index.html\", \"$(BuildDir)\")"]
