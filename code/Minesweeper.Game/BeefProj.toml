@@ -2,9 +2,10 @@ FileVersion = 1
 Dependencies = {corlib = "*", raylib-beef = "*", BJSON = "*"}
 
 [Project]
-Name = "Minesweeper"
+Name = "Minesweeper.Game"
 TargetType = "BeefLib"
 StartupObject = "Minesweeper.Program"
+DefaultNamespace = "Minesweeper"
 
 [Configs.Debug.wasm32]
 OtherLinkFlags = "$(LinkFlags) -sFETCH=1"

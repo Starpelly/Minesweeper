@@ -15,7 +15,7 @@ public static class Newgrounds
 	}
 
 	public const String NG_GATEWAY = "https://www.newgrounds.io/gateway_v3.php";
-	public const String APP_ID = "60887:rrikEyZ0";
+	public const String APP_ID = "WOMP_WOMP";
 
 	public const int SCORE_BOARD_ID = 15239;
 	public const int COMBO_BOARD_ID = 15240;
