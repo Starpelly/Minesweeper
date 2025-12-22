@@ -1,56 +1,59 @@
 using System;
+using System.IO;
+using System.Collections;
 using RaylibBeef;
-namespace Minesweeper;
+
+namespace Minesweeper.Game;
 
 public static struct Data
 {
-	public static uint8[?] WindowIcon = Compiler.ReadBinary("assets/icon.png");
+	public static uint8[?] WindowIcon = Compiler.ReadBinary("../../assets/icon.png");
 
 	public static struct Textures
 	{
-		public static uint8[?] Flags = Compiler.ReadBinary("assets/sprites/flags.png");
-		public static uint8[?] Tiles = Compiler.ReadBinary("assets/sprites/tiles.png");
-		public static uint8[?] Frame = Compiler.ReadBinary("assets/sprites/frame.png");
-		public static uint8[?] Bomb = Compiler.ReadBinary("assets/sprites/bomb.png");
-		public static uint8[?] Heart = Compiler.ReadBinary("assets/sprites/heart.png");
-		public static uint8[?] Boxsubmus = Compiler.ReadBinary("assets/sprites/boxsubmus.png");
-		public static uint8[?] Cloud = Compiler.ReadBinary("assets/sprites/cloud.png");
-		public static uint8[?] Logo = Compiler.ReadBinary("assets/sprites/logo.png");
+		public static uint8[?] Flags = Compiler.ReadBinary("../../assets/sprites/flags.png");
+		public static uint8[?] Tiles = Compiler.ReadBinary("../../assets/sprites/tiles.png");
+		public static uint8[?] Frame = Compiler.ReadBinary("../../assets/sprites/frame.png");
+		public static uint8[?] Bomb = Compiler.ReadBinary("../../assets/sprites/bomb.png");
+		public static uint8[?] Heart = Compiler.ReadBinary("../../assets/sprites/heart.png");
+		public static uint8[?] Boxsubmus = Compiler.ReadBinary("../../assets/sprites/boxsubmus.png");
+		public static uint8[?] Cloud = Compiler.ReadBinary("../../assets/sprites/cloud.png");
+		public static uint8[?] Logo = Compiler.ReadBinary("../../assets/sprites/logo.png");
 
-		public static uint8[?] Logo_0 = Compiler.ReadBinary("assets/sprites/logo_char_1.png");
-		public static uint8[?] Logo_1 = Compiler.ReadBinary("assets/sprites/logo_char_2.png");
-		public static uint8[?] Logo_2 = Compiler.ReadBinary("assets/sprites/logo_char_3.png");
-		public static uint8[?] Logo_3 = Compiler.ReadBinary("assets/sprites/logo_char_4.png");
-		public static uint8[?] Logo_4 = Compiler.ReadBinary("assets/sprites/logo_char_5.png");
-		public static uint8[?] Logo_5 = Compiler.ReadBinary("assets/sprites/logo_char_6.png");
-		public static uint8[?] Logo_6 = Compiler.ReadBinary("assets/sprites/logo_char_7.png");
-		public static uint8[?] Logo_7 = Compiler.ReadBinary("assets/sprites/logo_char_8.png");
-		public static uint8[?] Logo_8 = Compiler.ReadBinary("assets/sprites/logo_char_9.png");
-		public static uint8[?] Logo_9 = Compiler.ReadBinary("assets/sprites/logo_char_10.png");
-		public static uint8[?] Logo_10 = Compiler.ReadBinary("assets/sprites/logo_char_11.png");
-		public static uint8[?] Logo_11 = Compiler.ReadBinary("assets/sprites/logo_char_12.png");
+		public static uint8[?] Logo_0 = Compiler.ReadBinary("../../assets/sprites/logo_char_1.png");
+		public static uint8[?] Logo_1 = Compiler.ReadBinary("../../assets/sprites/logo_char_2.png");
+		public static uint8[?] Logo_2 = Compiler.ReadBinary("../../assets/sprites/logo_char_3.png");
+		public static uint8[?] Logo_3 = Compiler.ReadBinary("../../assets/sprites/logo_char_4.png");
+		public static uint8[?] Logo_4 = Compiler.ReadBinary("../../assets/sprites/logo_char_5.png");
+		public static uint8[?] Logo_5 = Compiler.ReadBinary("../../assets/sprites/logo_char_6.png");
+		public static uint8[?] Logo_6 = Compiler.ReadBinary("../../assets/sprites/logo_char_7.png");
+		public static uint8[?] Logo_7 = Compiler.ReadBinary("../../assets/sprites/logo_char_8.png");
+		public static uint8[?] Logo_8 = Compiler.ReadBinary("../../assets/sprites/logo_char_9.png");
+		public static uint8[?] Logo_9 = Compiler.ReadBinary("../../assets/sprites/logo_char_10.png");
+		public static uint8[?] Logo_10 = Compiler.ReadBinary("../../assets/sprites/logo_char_11.png");
+		public static uint8[?] Logo_11 = Compiler.ReadBinary("../../assets/sprites/logo_char_12.png");
 	}
 
 	public static struct Sounds
 	{
-		public static uint8[?] Click = Compiler.ReadBinary("assets/sounds/click.wav");
-		public static uint8[?] Flag = Compiler.ReadBinary("assets/sounds/flag.wav");
-		public static uint8[?] Boom = Compiler.ReadBinary("assets/sounds/boom.wav");
-		public static uint8[?] Tap = Compiler.ReadBinary("assets/sounds/tap.wav");
-		public static uint8[?] Win = Compiler.ReadBinary("assets/sounds/win.wav");
-		public static uint8[?] ClearArea = Compiler.ReadBinary("assets/sounds/clear-area.wav");
-		public static uint8[?] FailedChord = Compiler.ReadBinary("assets/sounds/failed-chord.wav");
-		public static uint8[?] Hover = Compiler.ReadBinary("assets/sounds/hover.wav");
-		public static uint8[?] Splashscreen = Compiler.ReadBinary("assets/sounds/boxsubmus-splash.wav");
-		public static uint8[?] StartGame = Compiler.ReadBinary("assets/sounds/startgame.wav");
-		public static uint8[?] LoseTransition = Compiler.ReadBinary("assets/sounds/lose-transition.wav");
-		public static uint8[?] Restart = Compiler.ReadBinary("assets/sounds/restart.wav");
+		public static uint8[?] Click = Compiler.ReadBinary("../../assets/sounds/click.wav");
+		public static uint8[?] Flag = Compiler.ReadBinary("../../assets/sounds/flag.wav");
+		public static uint8[?] Boom = Compiler.ReadBinary("../../assets/sounds/boom.wav");
+		public static uint8[?] Tap = Compiler.ReadBinary("../../assets/sounds/tap.wav");
+		public static uint8[?] Win = Compiler.ReadBinary("../../assets/sounds/win.wav");
+		public static uint8[?] ClearArea = Compiler.ReadBinary("../../assets/sounds/clear-area.wav");
+		public static uint8[?] FailedChord = Compiler.ReadBinary("../../assets/sounds/failed-chord.wav");
+		public static uint8[?] Hover = Compiler.ReadBinary("../../assets/sounds/hover.wav");
+		public static uint8[?] Splashscreen = Compiler.ReadBinary("../../assets/sounds/boxsubmus-splash.wav");
+		public static uint8[?] StartGame = Compiler.ReadBinary("../../assets/sounds/startgame.wav");
+		public static uint8[?] LoseTransition = Compiler.ReadBinary("../../assets/sounds/lose-transition.wav");
+		public static uint8[?] Restart = Compiler.ReadBinary("../../assets/sounds/restart.wav");
 	}
 
 	public static struct Fonts
 	{
-		public static uint8[?] NokiaAtlas = Compiler.ReadBinary("assets/fonts/nokia.png");
-		public static uint8[?] NokiaOutlineAtlas = Compiler.ReadBinary("assets/fonts/nokia_outline.png");
+		public static uint8[?] NokiaAtlas = Compiler.ReadBinary("../../assets/fonts/nokia.png");
+		public static uint8[?] NokiaOutlineAtlas = Compiler.ReadBinary("../../assets/fonts/nokia_outline.png");
 	}
 }
 

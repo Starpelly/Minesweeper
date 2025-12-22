@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
-namespace Minesweeper;
+
+namespace Minesweeper.Game;
 
 extension Game
 {

@@ -1,4 +1,5 @@
 using System;
+
 namespace RaylibBeef;
 
 public struct Vector2I

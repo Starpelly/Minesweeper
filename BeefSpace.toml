@@ -1,8 +1,9 @@
 FileVersion = 1
-Projects = {MinesweeperLibrary = {Path = "."}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, MinesweeperGUI = {Path = "MinesweeperGUI"}, MinesweeperConsole = {Path = "MinesweeperConsole"}}
+Projects = {Minesweeper = {Path = "code/Minesweeper.Game"}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, BJSON = {Path = "vendor/BJSON/BJSON"}, MinesweeperWasm = {Path = "code/Minesweeper.Wasm"}, MinesweeperDesktop = {Path = "code/Minesweeper.Desktop"}, MinesweeperNewgrounds = {Path = "code/Minesweeper.Newgrounds"}}
+WorkspaceFolders = {Dependencies = ["BJSON", "raylib-beef", "corlib"]}
 
 [Workspace]
-StartupProject = "MinesweeperGUI"
+StartupProject = "MinesweeperDesktop"
 
 [Configs.Debug.Win64]
 ConfigSelections = {raylib-beef = {Config = "StaticDebug"}}
@@ -12,13 +13,13 @@ AllocType = "CRT"
 EnableObjectDebugFlags = false
 EmitObjectAccessCheck = false
 
-[Configs.Release.Win64]
-ConfigSelections = {raylib-beef = {Config = "StaticRelease"}}
-
 [Configs.Paranoid.wasm32]
 AllocType = "CRT"
 EnableObjectDebugFlags = false
 EmitObjectAccessCheck = false
+
+[Configs.Release.Win64]
+ConfigSelections = {raylib-beef = {Config = "StaticRelease"}}
 
 [Configs.Test.wasm32]
 AllocType = "CRT"

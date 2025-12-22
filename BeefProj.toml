@@ -1,8 +1,0 @@
-FileVersion = 1
-Dependencies = {corlib = "*", raylib-beef = "*"}
-
-[Project]
-Name = "MinesweeperLibrary"
-TargetType = "BeefLib"
-StartupObject = "Minesweeper.Program"
-DefaultNamespace = "Minesweeper"

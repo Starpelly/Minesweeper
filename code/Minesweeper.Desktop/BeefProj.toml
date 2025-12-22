@@ -1,10 +1,11 @@
 FileVersion = 1
-Dependencies = {corlib = "*", MinesweeperLibrary = "*"}
+Dependencies = {corlib = "*", Minesweeper = "*"}
 
 [Project]
-Name = "MinesweeperGUI"
+Name = "MinesweeperDesktop"
 TargetType = "BeefGUIApplication"
-StartupObject = "MinesweeperGUI.Program"
+StartupObject = "Minesweeper.Desktop.Program"
+DefaultNamespace = "Minesweeper.Desktop"
 
 [Platform.Windows]
 IconFile = "$(WorkspaceDir)/assets/icon.ico"

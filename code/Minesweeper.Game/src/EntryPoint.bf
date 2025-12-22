@@ -1,11 +1,16 @@
 using System;
+using System.Interop;
+using System.Diagnostics;
+
 using RaylibBeef;
 
-namespace Minesweeper;
+namespace Minesweeper.Game;
 
-class EntryPoint
+abstract class EntryPoint
 {
 	private const bool VIEWPORT_USE_RENDERTEXTURE = false;
+
+	public static Self Instance { get; private set; }
 
 	private enum SceneType
 	{
@@ -15,19 +20,6 @@ class EntryPoint
 	}
 
 #if BF_PLATFORM_WASM
-	[CLink, CallingConvention(.Stdcall)]
-	private static extern void emscripten_console_log(char8* utf8String);
-
-	private function void em_callback_func();
-
-	[CLink, CallingConvention(.Stdcall)]
-	private static extern void emscripten_set_main_loop(em_callback_func func, int32 fps, int32 simulateInfinteLoop);
-
-	[CLink, CallingConvention(.Stdcall)]
-	private static extern int32 emscripten_set_main_loop_timing(int32 mode, int32 value);
-
-	[CLink, CallingConvention(.Stdcall)]
-	private static extern double emscripten_get_now();
 
 	private static void emscriptenMainLoop()
 	{
@@ -35,7 +27,7 @@ class EntryPoint
 
 		if (test)
 		{
-			Loop();
+			Instance.Loop();
 		}
 		else
 		{
@@ -44,27 +36,28 @@ class EntryPoint
 			Raylib.EndDrawing();
 		}
 	}
+
 #endif
 
-	private static Scene s_CurrentScene ~ delete _;
-	private static SceneType s_SceneToSwapTo = .Null;
-	private static bool s_SwappingScene = false;
+	private Scene s_CurrentScene ~ delete _;
+	private SceneType s_SceneToSwapTo = .Null;
+	private bool s_SwappingScene = false;
 
 #if !GAME_SCREEN_FREE
-	private static RenderTexture s_ScreenTexture;
+	private RenderTexture s_ScreenTexture;
 #endif
 
-	private static Vector2 s_MousePositionViewport = .Zero;
-	private static Vector2 s_ViewportSize = .Zero;
-	private static int s_ViewportScale = 1;
+	private Vector2 s_MousePositionViewport = .Zero;
+	private Vector2 s_ViewportSize = .Zero;
+	private int s_ViewportScale = 1;
 
-	public static Vector2 MousePositionViewport => s_MousePositionViewport;
-	public static Vector2 ViewportSize => s_ViewportSize;
-	public static int ViewportScale => s_ViewportScale;
+	public Vector2 MousePositionViewport => s_MousePositionViewport;
+	public Vector2 ViewportSize => s_ViewportSize;
+	public int ViewportScale => s_ViewportScale;
 
-	private static Vector2 s_LastViewportSize = .(0, 0);
+	private Vector2 s_LastViewportSize = .(0, 0);
 
-	public static void SetScene<T>() where T : Scene
+	public void SetScene<T>() where T : Scene
 	{
 		s_SwappingScene = true;
 		if (typeof(T) == typeof(Splashscreen))
@@ -73,7 +66,16 @@ class EntryPoint
 			s_SceneToSwapTo = .Game;
 	}
 
-	public static void Start(String[] args)
+	public abstract void OnInit();
+	public abstract void RequestPostScore(int points, int combo);
+
+	public this()
+	{
+		Debug.Assert(Instance == null);
+		Instance = this;
+	}
+
+	public void Start(String[] args)
 	{
 		ConfigFlags flags = .FLAG_VSYNC_HINT | .FLAG_WINDOW_RESIZABLE;
 #if GAME_SCREEN_FREE
@@ -81,6 +83,7 @@ class EntryPoint
 		flags |= .FLAG_MSAA_4X_HINT;
 
 		Raylib.SetConfigFlags(flags);
+		Raylib.SetTraceLogLevel(.LOG_ERROR);
 		Raylib.InitWindow(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT, "Minesweeper+");
 
 		// Load window icon
@@ -115,9 +118,11 @@ class EntryPoint
 #else
 		SetScene<Splashscreen>();
 #endif
-		// s_CurrentScene = scope Game();
+
+		OnInit();
 
 #if BF_PLATFORM_WASM
+
 		emscripten_set_main_loop(=> emscriptenMainLoop, 0, 1);
 #else
 		while (!Raylib.WindowShouldClose())
@@ -132,11 +137,13 @@ class EntryPoint
 
 		DestroyAssets();
 
+		// Newgrounds.Logout();
+
 		Raylib.CloseAudioDevice();
 		Raylib.CloseWindow();
 	}
 
-	private static void Loop()
+	private void Loop()
 	{
 		// Swap scene
 		if (s_SwappingScene == true)
@@ -182,7 +189,9 @@ class EntryPoint
 		s_MousePositionViewport = .((relativeMouseX / viewportSize.x) * SCREEN_WIDTH, (relativeMouseY / viewportSize.y) * SCREEN_HEIGHT);
 		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, SCREEN_WIDTH), Math.Clamp(s_MousePositionViewport.y, 0, SCREEN_HEIGHT));
 
-		s_CurrentScene.Update();
+		bool shouldUpdate = true;
+		if (shouldUpdate)
+			s_CurrentScene.Update();
 
 		Raylib.BeginDrawing();
 

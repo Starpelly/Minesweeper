@@ -1,0 +1,8 @@
+FileVersion = 1
+Dependencies = {corlib = "*", Minesweeper = "*"}
+
+[Project]
+Name = "MinesweeperNewgrounds"
+TargetType = "BeefGUIApplication"
+StartupObject = "Minesweeper.Newgrounds.Program"
+DefaultNamespace = "Minesweeper.Newgrounds"
