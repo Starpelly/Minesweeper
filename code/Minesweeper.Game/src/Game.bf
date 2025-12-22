@@ -1,9 +1,10 @@
 using System;
 using System.Collections;
 using System.Diagnostics;
+
 using RaylibBeef;
 
-namespace Minesweeper;
+namespace Minesweeper.Game;
 
 [Reflect(.DefaultConstructor), AlwaysInclude(AssumeInstantiated=true)]
 class Game : Scene
@@ -338,7 +339,7 @@ class Game : Scene
 #if GAME_SCREEN_FREE
 		return Raylib.GetMousePosition();
 #else
-		return EntryPoint.MousePositionViewport;
+		return EntryPoint.Instance.MousePositionViewport;
 #endif
 	}
 
@@ -619,7 +620,9 @@ class Game : Scene
 
 			if (m_State.State == .GameOver)
 			{
-				Newgrounds.PostScore((int)Math.Ceiling(m_State.Points), m_SessionHighscore.Combo);
+				let points = (int)Math.Ceiling(m_State.Points);
+				let combo = m_SessionHighscore.Combo;
+				EntryPoint.Instance.RequestPostScore(points, combo);
 
 				// Raylib.PlaySound(Assets.Sounds.GameOver.Sound);
 			}
@@ -1697,7 +1700,7 @@ class Game : Scene
 		{
 			if (Raylib.IsMouseButtonDown(.MOUSE_BUTTON_MIDDLE))
 			{
-				var delta = Raylib.GetMouseDelta() / EntryPoint.ViewportScale;
+				var delta = Raylib.GetMouseDelta() / EntryPoint.Instance.ViewportScale;
 				delta = Raymath.Vector2Scale(delta, -1.0f / m_Camera.zoom);
 				m_Camera.target = Raymath.Vector2Add(m_Camera.target, delta);
 			}

@@ -16,7 +16,7 @@ extension Math
 
 	public static float RandomFloat32(float min, float max)
 	{
-		return (float)Minesweeper.Game.Random.NextDouble() * (max - min) + min;
+		return (float)Minesweeper.Game.Game.Random.NextDouble() * (max - min) + min;
 	}
 
 	public static float Normalize(float val, float min, float max, bool clamp = false)

@@ -1,7 +1,0 @@
-FileVersion = 1
-Dependencies = {corlib = "*", "Minesweeper.Game" = "*"}
-
-[Project]
-Name = "MinesweeperDev"
-StartupObject = "Minesweeper.Dev.Program"
-DefaultNamespace = "Minesweeper.Dev"

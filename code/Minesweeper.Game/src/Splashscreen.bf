@@ -1,6 +1,7 @@
-using RaylibBeef;
 using System;
-namespace Minesweeper;
+using RaylibBeef;
+
+namespace Minesweeper.Game;
 
 [Reflect(.DefaultConstructor), AlwaysInclude(AssumeInstantiated=true)]
 class Splashscreen : Scene
@@ -49,7 +50,7 @@ class Splashscreen : Scene
 		}
 		if (m_SceneTime >= SPLASHSCREEN_LENGTH)
 		{
-			EntryPoint.SetScene<Game>();
+			EntryPoint.Instance.SetScene<Game>();
 		}
 	}
 

@@ -1,2 +1,2 @@
-cd ../build/Debug_wasm32/MinesweeperConsole
+cd ../build/Debug_wasm32/MinesweeperNewgrounds
 python -m http.server

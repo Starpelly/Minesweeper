@@ -1,4 +1,5 @@
 FileVersion = 1
+Dependencies = {corlib = "*", Minesweeper = "*"}
 
 [Project]
 Name = "MinesweeperNewgrounds"

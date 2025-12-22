@@ -1,12 +1,16 @@
 using System;
 using System.Interop;
+using System.Diagnostics;
+
 using RaylibBeef;
 
-namespace Minesweeper;
+namespace Minesweeper.Game;
 
-class EntryPoint
+abstract class EntryPoint
 {
 	private const bool VIEWPORT_USE_RENDERTEXTURE = false;
+
+	public static Self Instance { get; private set; }
 
 	private enum SceneType
 	{
@@ -23,7 +27,7 @@ class EntryPoint
 
 		if (test)
 		{
-			Loop();
+			Instance.Loop();
 		}
 		else
 		{
@@ -35,25 +39,25 @@ class EntryPoint
 
 #endif
 
-	private static Scene s_CurrentScene ~ delete _;
-	private static SceneType s_SceneToSwapTo = .Null;
-	private static bool s_SwappingScene = false;
+	private Scene s_CurrentScene ~ delete _;
+	private SceneType s_SceneToSwapTo = .Null;
+	private bool s_SwappingScene = false;
 
 #if !GAME_SCREEN_FREE
-	private static RenderTexture s_ScreenTexture;
+	private RenderTexture s_ScreenTexture;
 #endif
 
-	private static Vector2 s_MousePositionViewport = .Zero;
-	private static Vector2 s_ViewportSize = .Zero;
-	private static int s_ViewportScale = 1;
+	private Vector2 s_MousePositionViewport = .Zero;
+	private Vector2 s_ViewportSize = .Zero;
+	private int s_ViewportScale = 1;
 
-	public static Vector2 MousePositionViewport => s_MousePositionViewport;
-	public static Vector2 ViewportSize => s_ViewportSize;
-	public static int ViewportScale => s_ViewportScale;
+	public Vector2 MousePositionViewport => s_MousePositionViewport;
+	public Vector2 ViewportSize => s_ViewportSize;
+	public int ViewportScale => s_ViewportScale;
 
-	private static Vector2 s_LastViewportSize = .(0, 0);
+	private Vector2 s_LastViewportSize = .(0, 0);
 
-	public static void SetScene<T>() where T : Scene
+	public void SetScene<T>() where T : Scene
 	{
 		s_SwappingScene = true;
 		if (typeof(T) == typeof(Splashscreen))
@@ -62,7 +66,16 @@ class EntryPoint
 			s_SceneToSwapTo = .Game;
 	}
 
-	public static void Start(String[] args)
+	public abstract void OnInit();
+	public abstract void RequestPostScore(int points, int combo);
+
+	public this()
+	{
+		Debug.Assert(Instance == null);
+		Instance = this;
+	}
+
+	public void Start(String[] args)
 	{
 		ConfigFlags flags = .FLAG_VSYNC_HINT | .FLAG_WINDOW_RESIZABLE;
 #if GAME_SCREEN_FREE
@@ -106,10 +119,9 @@ class EntryPoint
 		SetScene<Splashscreen>();
 #endif
 
-#if BF_PLATFORM_WASM
+		OnInit();
 
-		Newgrounds.Init();
-		Newgrounds.Login();
+#if BF_PLATFORM_WASM
 
 		emscripten_set_main_loop(=> emscriptenMainLoop, 0, 1);
 #else
@@ -131,7 +143,7 @@ class EntryPoint
 		Raylib.CloseWindow();
 	}
 
-	private static void Loop()
+	private void Loop()
 	{
 		// Swap scene
 		if (s_SwappingScene == true)

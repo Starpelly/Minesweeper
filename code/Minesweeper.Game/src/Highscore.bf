@@ -1,5 +1,0 @@
-namespace Minesweeper;
-
-class Highscore
-{
-}

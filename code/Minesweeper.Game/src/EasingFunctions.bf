@@ -1,5 +1,6 @@
 using System;
-namespace Minesweeper;
+
+namespace Minesweeper.Game;
 
 public static class EasingFunctions
 {

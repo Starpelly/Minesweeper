@@ -3,7 +3,7 @@ using System.IO;
 using System.Collections;
 using RaylibBeef;
 
-namespace Minesweeper;
+namespace Minesweeper.Game;
 
 public static struct Data
 {

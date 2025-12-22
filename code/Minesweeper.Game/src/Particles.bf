@@ -1,7 +1,7 @@
 using System;
 using RaylibBeef;
 
-namespace Minesweeper;
+namespace Minesweeper.Game;
 
 class Particle
 {

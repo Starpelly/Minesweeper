@@ -1,13 +1,16 @@
+#if BF_PLATFORM_WASM
 using System;
+
 using BJSON;
 using BJSON.Enums;
 using BJSON.Models;
 
-namespace Minesweeper;
+using Minesweeper.Game;
+
+namespace Minesweeper.Newgrounds;
 
 public static class Newgrounds
 {
-#if NEWGROUNDS
 	public class Session
 	{
 		public String ID = new .() ~ delete _;
@@ -15,7 +18,7 @@ public static class Newgrounds
 	}
 
 	public const String NG_GATEWAY = "https://www.newgrounds.io/gateway_v3.php";
-	public const String APP_ID = "WOMP_WOMP";
+	public const String APP_ID = Compiler.ReadText("AppID.txt");
 
 	public const int SCORE_BOARD_ID = 15239;
 	public const int COMBO_BOARD_ID = 15240;
@@ -105,14 +108,13 @@ public static class Newgrounds
 		emscripten_fetch(&attr, NG_GATEWAY);
 
 	}
-#endif
+
 	public static void Init()
 	{
 	}
 
 	public static void Login()
 	{
-#if NEWGROUNDS
 		let sessionID = StringView(emscripten_run_script_string("""
 			(() => {
 				const params = new URLSearchParams(window.location.search);
@@ -255,12 +257,10 @@ public static class Newgrounds
 			postRequest(jsonString, (fetch) => onSuccess(fetch), (fetch) => onError(fetch));
 #endif
 		}
-#endif
 	}
 
 	public static void PostScore(int points, int combo)
 	{
-#if NEWGROUNDS
 		if (m_session == null)
 			return;
 		if (points == 0 && combo == 0)
@@ -333,7 +333,6 @@ public static class Newgrounds
 		}
 
 		postRequest(jsonString, (fetch) => onSuccess(fetch), (fetch) => onError(fetch));
-#endif
 	}
 
 	/*
@@ -352,3 +351,4 @@ public static class Newgrounds
 	private static function int(void* ptr, int size, int count, void* ctx) writeFunc = => WriteFunc;
 	*/
 }
+#endif

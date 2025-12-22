@@ -1,9 +1,9 @@
 FileVersion = 1
-Projects = {"Minesweeper.Game" = {Path = "code/Minesweeper.Game"}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, MinesweeperApp = {Path = "code/Minesweeper.Release"}, MinesweeperDev = {Path = "code/Minesweeper.Dev"}, BJSON = {Path = "vendor/BJSON/BJSON"}, MinesweeperNewgrounds = {Path = "code/Minesweeper.Newgrounds"}}
+Projects = {Minesweeper = {Path = "code/Minesweeper.Game"}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, BJSON = {Path = "vendor/BJSON/BJSON"}, MinesweeperWasm = {Path = "code/Minesweeper.Wasm"}, MinesweeperDesktop = {Path = "code/Minesweeper.Desktop"}, MinesweeperNewgrounds = {Path = "code/Minesweeper.Newgrounds"}}
 WorkspaceFolders = {Dependencies = ["BJSON", "raylib-beef", "corlib"]}
 
 [Workspace]
-StartupProject = "MinesweeperDev"
+StartupProject = "MinesweeperDesktop"
 
 [Configs.Debug.Win64]
 ConfigSelections = {raylib-beef = {Config = "StaticDebug"}}
@@ -13,52 +13,15 @@ AllocType = "CRT"
 EnableObjectDebugFlags = false
 EmitObjectAccessCheck = false
 
-[Configs.Release.Win64]
-ConfigSelections = {raylib-beef = {Config = "StaticRelease"}}
-
 [Configs.Paranoid.wasm32]
 AllocType = "CRT"
 EnableObjectDebugFlags = false
 EmitObjectAccessCheck = false
 
+[Configs.Release.Win64]
+ConfigSelections = {raylib-beef = {Config = "StaticRelease"}}
+
 [Configs.Test.wasm32]
 AllocType = "CRT"
 EnableObjectDebugFlags = false
 EmitObjectAccessCheck = false
-
-[Configs.Newgrounds.Win64]
-Toolset = "LLVM"
-BfOptimizationLevel = "O2"
-LTOType = "Thin"
-AllocType = "CRT"
-RuntimeChecks = false
-EmitDynamicCastCheck = false
-EnableObjectDebugFlags = false
-EmitObjectAccessCheck = false
-EnableRealtimeLeakCheck = false
-AllowHotSwapping = false
-IncrementalBuild = false
-COptimizationLevel = "O2"
-ConfigSelections = {raylib-beef = {Config = "StaticRelease"}, "Minesweeper.Game" = {Config = "Release"}, MinesweeperApp = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}
-
-[Configs.Newgrounds.Win32]
-Toolset = "LLVM"
-BfOptimizationLevel = "O2"
-LTOType = "Thin"
-AllocType = "CRT"
-RuntimeChecks = false
-EmitDynamicCastCheck = false
-EnableObjectDebugFlags = false
-EmitObjectAccessCheck = false
-EnableRealtimeLeakCheck = false
-AllowHotSwapping = false
-IncrementalBuild = false
-COptimizationLevel = "O2"
-ConfigSelections = {"Minesweeper.Game" = {Config = "Release"}, raylib-beef = {Config = "Release"}, MinesweeperApp = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}
-
-[Configs.Newgrounds.wasm32]
-PreprocessorMacros = ["NEWGROUNDS"]
-AllocType = "CRT"
-EnableObjectDebugFlags = false
-EmitObjectAccessCheck = false
-ConfigSelections = {"Minesweeper.Game" = {Config = "Release"}, raylib-beef = {Config = "Release"}, MinesweeperApp = {Config = "Release"}, MinesweeperDev = {Config = "Release"}, BJSON = {Config = "Release"}}

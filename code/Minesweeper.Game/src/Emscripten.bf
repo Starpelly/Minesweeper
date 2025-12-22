@@ -1,7 +1,8 @@
-using System.Interop;
 using System;
+using System.Interop;
+
 #if BF_PLATFORM_WASM
-namespace Minesweeper;
+namespace Minesweeper.Game;
 
 static
 {

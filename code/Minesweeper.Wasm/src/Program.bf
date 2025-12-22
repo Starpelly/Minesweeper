@@ -2,23 +2,17 @@ using System;
 
 using Minesweeper.Game;
 
-namespace Minesweeper.Newgrounds;
+namespace Minesweeper.Wasm;
 
+// The difference between this and Desktop? Nothing. But it felt right to separate these?
 class NewgroundsEntry : EntryPoint
 {
 	public override void OnInit()
 	{
-#if BF_PLATFORM_WASM
-		Newgrounds.Init();
-		Newgrounds.Login();
-#endif
 	}
 
 	public override void RequestPostScore(int points, int combo)
 	{
-#if BF_PLATFORM_WASM
-		Newgrounds.PostScore(points, combo);
-#endif
 	}
 }
 
