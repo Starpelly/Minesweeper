@@ -1,5 +1,5 @@
 FileVersion = 1
-Projects = {Minesweeper = {Path = "code/Minesweeper.Game"}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, BJSON = {Path = "vendor/BJSON/BJSON"}, MinesweeperWasm = {Path = "code/Minesweeper.Wasm"}, MinesweeperDesktop = {Path = "code/Minesweeper.Desktop"}, MinesweeperNewgrounds = {Path = "code/Minesweeper.Newgrounds"}}
+Projects = {Minesweeper = {Path = "code/Minesweeper.Game"}, raylib-beef = {Path = "vendor/raylib-beef/raylib-beef"}, BJSON = {Path = "vendor/BJSON/BJSON"}, MinesweeperWasm = {Path = "code/Minesweeper.Wasm"}, MinesweeperDesktop = {Path = "code/Minesweeper.Desktop"}, MinesweeperNewgrounds = {Path = "code/Minesweeper.Newgrounds"}, MinesweeperAndroid = {Path = "code/Minesweeper.Android"}}
 WorkspaceFolders = {Dependencies = ["BJSON", "raylib-beef", "corlib"]}
 
 [Workspace]

@@ -4,3 +4,6 @@
 [submodule "vendor/BJSON"]
 	path = vendor/BJSON
 	url = https://github.com/M0n7y5/BJSON
+[submodule "android/app/src/main/cpp/vendor/Beef"]
+	path = android/app/src/main/cpp/vendor/Beef
+	url = https://github.com/Starpelly/Beef

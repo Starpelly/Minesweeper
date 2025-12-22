@@ -1,0 +1,8 @@
+FileVersion = 1
+Dependencies = {corlib = "*", Minesweeper = "*"}
+
+[Project]
+Name = "MinesweeperAndroid"
+TargetType = "BeefLib"
+StartupObject = "Minesweeper.Android.Program"
+DefaultNamespace = "Minesweeper.Android"

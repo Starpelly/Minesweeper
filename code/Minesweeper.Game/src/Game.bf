@@ -1858,7 +1858,11 @@ class Game : Scene
 				drawChar(.(287, 6), Assets.Textures.Logo_Char_10);
 				drawChar(.(317, 8), Assets.Textures.Logo_Char_11);
 
+#if BF_PLATFORM_ANDROID
+				let txt = "Tap to start!";
+#else
 				let txt = "Click to start!";
+#endif
 				let txtSize = 12 * 2;
 				let txtPos = Vector2(-Raylib.MeasureTextEx(Assets.Fonts.Nokia.Font, txt, txtSize, 0).x / 2, 90);
 				DrawText(txt, txtPos, .Big, .Outline, uiAlpha);

@@ -5,7 +5,7 @@ using Minesweeper.Game;
 namespace Minesweeper.Wasm;
 
 // The difference between this and Desktop? Nothing. But it felt right to separate these?
-class NewgroundsEntry : EntryPoint
+class WasmEntry : EntryPoint
 {
 	public override void OnInit()
 	{
@@ -20,7 +20,7 @@ class Program
 {
 	public static void Main(String[] args)
 	{
-		let entry = scope NewgroundsEntry();
+		let entry = scope WasmEntry();
 		entry.Start(args);
 	}
 }
