@@ -7,7 +7,7 @@ Special thanks to **Darkener** for playtesting!
 
 ## How to compile
 
-### Desktop:
+### Desktop
 Just open the project in the Beef IDE, set the startup project to `Minesweeper.Desktop` and press `F5`, it should just work.
 
 ### Newgrounds
