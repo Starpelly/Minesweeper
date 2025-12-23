@@ -192,8 +192,9 @@ abstract class EntryPoint
 
 		let relativeMouseX = Raylib.GetMouseX() - viewportPos.x;
 		let relativeMouseY = Raylib.GetMouseY() - viewportPos.y;
-		s_MousePositionViewport = .((relativeMouseX / viewportSize.x) * SCREEN_WIDTH, (relativeMouseY / viewportSize.y) * SCREEN_HEIGHT);
-		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, SCREEN_WIDTH), Math.Clamp(s_MousePositionViewport.y, 0, SCREEN_HEIGHT));
+
+		s_MousePositionViewport = .((relativeMouseX / viewportSize.x), (relativeMouseY / viewportSize.y));
+		s_MousePositionViewport = .(Math.Clamp(s_MousePositionViewport.x, 0, 1), Math.Clamp(s_MousePositionViewport.y, 0, 1));
 
 		bool shouldUpdate = true;
 		if (shouldUpdate)
@@ -219,6 +220,20 @@ abstract class EntryPoint
 #endif
 
 		s_CurrentScene.Render();
+
+#if DEBUG
+		Text.DrawTextColored(scope $"{Raylib.GetFPS()} FPS", .(20, 20), .Big, .Outline, .Green);
+		Text.DrawTextColored("Running Debug Configuration", .(20, 40), .Big, .Outline, .Green);
+
+#if BF_PLATFORM_ANDROID
+		let platform = "Android";
+#elif BF_PLATFORM_WASM
+		let platform = "Wasm";
+#elif BF_PLATFORM_WINDOWS
+		let platform = "Windows";
+#endif
+		Text.DrawTextColored(scope $"Platform: {platform}", .(20, 60), .Big, .Outline, .Green);
+#endif
 
 #if !GAME_SCREEN_FREE
 		if (VIEWPORT_USE_RENDERTEXTURE)

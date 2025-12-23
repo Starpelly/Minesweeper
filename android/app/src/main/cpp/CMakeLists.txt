@@ -60,7 +60,10 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
 elseif(CMAKE_BUILD_TYPE MATCHES "Release")
     set(BEEF_PROJECT_CONFIG "Release")
 else()
-    set(BEEF_PROJECT_CONFIG "Debug")
+    # @HACK
+    # For some reason, when making app bundles it's not set to Debug or Release?
+    # So this is a temporary HACK, I suppose...
+    set(BEEF_PROJECT_CONFIG "Release")
 endif()
 
 if (${ANDROID_ABI} STREQUAL "arm64-v8a")

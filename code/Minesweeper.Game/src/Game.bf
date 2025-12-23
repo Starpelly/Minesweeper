@@ -1,3 +1,5 @@
+#define BF_PLATFORM_ANDROID
+
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -108,21 +110,6 @@ class Game : Scene
 		LoseToGame,
 		WinToGame,
 		GameOverToRestart,
-	}
-
-	private enum DrawTextSize
-	{
-		Big,
-		Small,
-		Title,
-		Heading,
-	}
-
-	private enum DrawTextType
-	{
-		Outline,
-		NoOutline,
-		Shadow
 	}
 
 	// -----------------
@@ -306,6 +293,16 @@ class Game : Scene
 
 	private float m_TimeSinceGameRestart = 0.0f;
 	private bool m_RestartingGame = false;
+	
+#if BF_PLATFORM_ANDROID
+	private enum Android_TapState
+	{
+		Flag,
+		Open
+	}
+
+	private Android_TapState m_TapState = .Open;
+#endif
 
 	// -----------------
 	// Private accessors
@@ -339,7 +336,7 @@ class Game : Scene
 #if GAME_SCREEN_FREE
 		return Raylib.GetMousePosition();
 #else
-		return EntryPoint.Instance.MousePositionViewport;
+		return EntryPoint.Instance.MousePositionViewport * .(SCREEN_WIDTH, SCREEN_HEIGHT);
 #endif
 	}
 
@@ -1465,6 +1462,19 @@ class Game : Scene
 			// Update combo timer
 			if (m_State.State == .Game && m_UIState == .Game && !m_RestartingGame)
 			{
+#if BF_PLATFORM_ANDROID
+				if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
+				{
+					if (m_TapState == .Open || m_State.WaitingForFirstClick)
+					{
+						LeftClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
+					}
+					else if (m_TapState == .Flag)
+					{
+						RightClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
+					}
+				}
+#else
 				if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
 				{
 					LeftClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
@@ -1473,7 +1483,7 @@ class Game : Scene
 				{
 					RightClickBoard(GetBoardMouseCoords().x, GetBoardMouseCoords().y);
 				}
-
+#endif
 				mixin decrementComboMult()
 				{
 					m_State.ComboMult -= 1;
@@ -1783,38 +1793,6 @@ class Game : Scene
 		}
 	}
 
-	private float GetTextSize(DrawTextSize size)
-	{
-		switch (size)
-		{
-		case .Big: return 24;
-		case .Small: return 12;
-		case .Title: return 24 * 2;
-		case .Heading: return 24;
-		}
-	}
-
-	private void DrawText(String text, Vector2 pos, DrawTextSize size, DrawTextType type, uint8 alpha = 255)
-	{
-		DrawTextColored(text, pos, size, type, .(255, 255, 255, alpha));
-	}
-
-	private void DrawTextColored(String text, Vector2 pos, DrawTextSize size, DrawTextType type, Color color)
-	{
-		let txtSize = GetTextSize(size);
-
-		if (type == .Outline)
-			Raylib.DrawTextEx(Assets.Fonts.NokiaOutline.Font, text, pos, txtSize, 0, .(Color.DarkOutline.r, Color.DarkOutline.g, Color.DarkOutline.b, color.a));
-		else if (type == .Shadow)
-			Raylib.DrawTextEx(Assets.Fonts.Nokia.Font, text, pos - .(2, -2), txtSize, 0, .(Color.Shadow.r, Color.Shadow.g, Color.Shadow.b, color.a));
-		Raylib.DrawTextEx(Assets.Fonts.Nokia.Font, text, pos, txtSize, 0, color);
-	}
-
-	private Vector2 MeasureText(String text, DrawTextSize size)
-	{
-		return Raylib.MeasureTextEx(Assets.Fonts.Nokia.Font, text, GetTextSize(size), 0);
-	}
-
 	private float GetGameTransitionEx()
 	{
 		return EasingFunctions.OutExpo(Math.Normalize(m_TimeSinceUIStateChange, 0, UI_GAME_SLIDE_IN_LENGTH, true));
@@ -1860,18 +1838,32 @@ class Game : Scene
 
 #if BF_PLATFORM_ANDROID
 				let txt = "Tap to start!";
+				let txtPos = Vector2((-(Text.MeasureText(txt, .Big).x) / 2) - 3, 90);
 #else
 				let txt = "Click to start!";
+				let txtPos = Vector2(-(Text.MeasureText(txt, .Big).x) / 2, 90);
 #endif
-				let txtSize = 12 * 2;
-				let txtPos = Vector2(-Raylib.MeasureTextEx(Assets.Fonts.Nokia.Font, txt, txtSize, 0).x / 2, 90);
-				DrawText(txt, txtPos, .Big, .Outline, uiAlpha);
+				// Text.DrawText(txt, txtPos, .Big, .Outline, uiAlpha);
+
+				var charX = 0.0f;
+				for (let i < txt.Length)
+				{
+					let char = txt[i].ToString(.. scope .());
+					var charWidth = Text.MeasureText(char, .Big).x;
+#if BF_PLATFORM_ANDROID
+					if (i == 0) // The spacing between the 'T' and the 'a' looks weird...
+						charWidth -= 3;
+#endif
+					Text.DrawText(char, txtPos + .(charX, (float)Math.Sin((Raylib.GetTime() + (i * 0.1f)) * 3)), .Big, .Outline, uiAlpha);
+
+					charX += charWidth;
+				}
 
 				// Draw version
-				DrawText(scope $"v{GameVerison.Major}.{GameVerison.Minor}.{GameVerison.Build}", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(UI_SCREEN_WIDTH - 38, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
+				Text.DrawText(scope $"v{GameVerison.Major}.{GameVerison.Minor}.{GameVerison.Build}", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(UI_SCREEN_WIDTH - 38, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
 
 				// Attribution
-				DrawText(scope $"Created by Starpelly", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(4, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
+				Text.DrawText(scope $"Created by Starpelly", .(-UI_SCREEN_WIDTH / 2, -UI_SCREEN_HEIGHT / 2) + .(4, UI_SCREEN_HEIGHT - 14), .Small, .Outline, uiAlpha);
 			}
 			Raylib.EndMode2D();
 		}
@@ -1910,19 +1902,19 @@ class Game : Scene
 
 				// Top left
 				{
-					void drawSideThingLeft(String text, int32 timerWidth, int32 timerY, DrawTextSize size, Color bgColor)
+					void drawSideThingLeft(String text, int32 timerWidth, int32 timerY, Text.DrawTextSize size, Color bgColor)
 					{
 						var timerY;
 						timerY -= 8;
 
 						let textPadding = 0;
 
-						let timerHeight = GetTextSize(size) + textPadding;
+						let timerHeight = Text.GetTextSize(size) + textPadding;
 
 						let timerX = 0;
 
 						drawAngledSideBarLeft(.(timerX, timerY), .(timerWidth, timerHeight), bgColor);
-						DrawText(text, .(timerX + 4, timerY + (textPadding / 2)), size, .Outline);
+						Text.DrawText(text, .(timerX + 4, timerY + (textPadding / 2)), size, .Outline);
 					}
 
 					// Points
@@ -1951,7 +1943,7 @@ class Game : Scene
 						// Raylib.DrawTexturePro(texture, textureRegion, .(0 - 2, posY + 2, 32, 32), .Zero, 0, .Shadow);
 						Raylib.DrawTexturePro(texture, textureRegion, .(iconOffsetX, posY, 32, 32), .Zero, 0, .White);
 
-						DrawText(text, .(textOffsetX, posY + 6), .Big, .Outline);
+						Text.DrawText(text, .(textOffsetX, posY + 6), .Big, .Outline);
 					}
 
 					drawCounter(m_State.MineCount.ToString(.. scope .()), 156, Assets.Textures.Bomb.Texture, .(0, 0, 16, 16), 48, 0);
@@ -1997,12 +1989,12 @@ class Game : Scene
 					{
 						let str = scope $"Combo: x{m_State.ComboMult}";
 
-						let multXPos = (int32)UI_SCREEN_WIDTH - MeasureText(str, .Big).x - 4;
+						let multXPos = (int32)UI_SCREEN_WIDTH - Text.MeasureText(str, .Big).x - 4;
 						let multYPos = 30;
 
 						// drawAngledSideBarRight(.(0, multYPos), .(194, 20 + 4), .Black);
 
-						DrawText(str, .(multXPos, multYPos), .Big, .Outline);
+						Text.DrawText(str, .(multXPos, multYPos), .Big, .Outline);
 					}
 				}
 
@@ -2028,7 +2020,7 @@ class Game : Scene
 						drawAngledSideBarRight(.(0, timerY), .(timerWidth, timerHeight), bgColor);
 
 						// Raylib.DrawText(text, timerX + 4 + cornerWidth, timerY + (textPadding / 2), fontSize, Color.White);
-						DrawText(text, .(timerX + 4 + cornerWidth, timerY + (textPadding / 2) - 1), .Small, .Outline);
+						Text.DrawText(text, .(timerX + 4 + cornerWidth, timerY + (textPadding / 2) - 1), .Small, .Outline);
 					}
 
 					let baseY = UI_SCREEN_HEIGHT + 12;
@@ -2055,8 +2047,15 @@ class Game : Scene
 						int invI = Math.Abs((int)(i - MAX_LIVES)) - 1;
 						bool noHeart = invI > (int)m_State.Lives - 1;
 
+						let heartScale
+#if BF_PLATFORM_ANDROID
+							= 1.5f;
+#else
+							= 1;
+#endif
+
 						let heartSrcRec = Rectangle(noHeart ? 11 : 0, 0, 11, 10);
-						let heartDestRec = Rectangle(6 + ((21 + -1) * invI), UI_SCREEN_HEIGHT - 26, 11 * 2, 10 * 2);
+						let heartDestRec = Rectangle(6 + ((21 + -1) * invI * heartScale), UI_SCREEN_HEIGHT - 4 - (11 * 2 * heartScale), 11 * 2 * heartScale, 10 * 2 * heartScale);
 
 						// Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec - .(2, -2, 0, 0), .Zero, 0, .Shadow);
 						Raylib.DrawTexturePro(Assets.Textures.Heart.Texture, heartSrcRec, heartDestRec, .Zero, 0, .White);
@@ -2066,22 +2065,83 @@ class Game : Scene
 				if (m_State.MineOverflow)
 				{
 					let txt = scope $"Mine overflow! No guessing is disabled!";
-					let txtPos = Vector2((UI_SCREEN_WIDTH / 2) - (MeasureText(txt, .Small).x * 0.5f) - 0.5f, UI_SCREEN_HEIGHT - 28);
+					let txtPos = Vector2((UI_SCREEN_WIDTH / 2) - (Text.MeasureText(txt, .Small).x * 0.5f) - 0.5f, UI_SCREEN_HEIGHT - 28);
 
 					var charX = 0.0f;
 					for (let i < txt.Length)
 					{
 						let char = txt[i].ToString(.. scope .());
-						let charWidth = MeasureText(char, .Small).x;
+						let charWidth = Text.MeasureText(char, .Small).x;
 
-
-						DrawText(char, txtPos + .(charX, (float)Math.Sin((Raylib.GetTime() + (i * 0.1f)) * 4)), .Small, .Outline);
+						Text.DrawText(char, txtPos + .(charX, (float)Math.Sin((Raylib.GetTime() + (i * 0.1f)) * 4)), .Small, .Outline);
 
 						charX += charWidth;
 					}
 
 					// DrawText(txt, .((UI_SCREEN_WIDTH / 2) - (MeasureText(txt, .Small).x * 0.5f) - 0.5f, UI_SCREEN_HEIGHT - 24), .Small, .Outline);
 				}
+
+				// Android buttons
+#if BF_PLATFORM_ANDROID
+				{
+					let buttonsPadding = 4;
+					let buttonsScale = 1;
+
+					let buttonWidth = 64;
+					let buttonHeight = 64;
+
+					let mousePos = EntryPoint.Instance.MousePositionViewport * .(UI_SCREEN_WIDTH, UI_SCREEN_HEIGHT);
+
+					// Raylib.DrawCircleV(mousePos, 16, Raylib.RED);
+
+					void drawButton(Android_TapState tapState, int textureIndex, Vector2 position)
+					{
+						let buttonRect = Rectangle(position.x, position.y, buttonWidth * buttonsScale, buttonHeight * buttonsScale);
+						var active = false;
+
+						let textureWidth = 32;
+						let textureHeight = 32;
+
+						let iconScale = 2;
+
+						if (m_TapState == tapState)
+						{
+							active = true;
+						}
+
+						if (Raylib.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT))
+						{
+							if (mousePos.x >= buttonRect.x && mousePos.x <= buttonRect.x + buttonRect.width
+								&& mousePos.y >= buttonRect.y && mousePos.y <= buttonRect.y + buttonRect.height)
+							{
+								m_TapState = tapState;
+								Raylib.PlaySound(Assets.Sounds.Tap.Sound);
+							}
+						}
+
+						let textureMargin = 2;
+
+						if (active)
+						{
+							Raylib.DrawRectangleRounded(buttonRect, 0.25f, 24, .(255, 255, 255, 175));
+						}
+
+						Raylib.DrawTexturePro(Assets.Textures.AndroidModeButtons.Texture,
+							.(((textureWidth + textureMargin) * textureIndex) + textureMargin, textureMargin, textureWidth, textureHeight),
+							.(position.x + (((buttonWidth * buttonsScale) - (textureWidth * iconScale)) / 2), position.y + (((buttonHeight * buttonsScale) - (textureHeight * iconScale)) / 2), textureWidth * iconScale, textureHeight * iconScale),
+							.Zero,
+							0,
+							active ? .(34, 34, 34, 255) : .White);
+					}
+
+					let sideBarX = 8;
+					let sideBarY = (UI_SCREEN_HEIGHT / 2) - ((buttonWidth * buttonsScale) / 2) + 0.5f;
+					Raylib.DrawRectangleRounded(.(sideBarX, sideBarY, (buttonWidth * buttonsScale) + (buttonsPadding * 2), ((buttonWidth * buttonsScale) * 2) + (buttonsPadding * 2)), 0.25f, 24, .(0, 0, 0, 180));
+
+					drawButton(.Flag, 2, .(sideBarX + buttonsPadding, sideBarY + ((buttonHeight * buttonsScale) * 1) + buttonsPadding));
+					drawButton(.Open, 1, .(sideBarX + buttonsPadding, sideBarY + buttonsPadding));
+				}
+#endif
 			}
 			Raylib.EndMode2D();
 			// Raylib.DrawCircleV(GetMousePosition(), 4, .Red);
@@ -2095,21 +2155,25 @@ class Game : Scene
 			// "Game over" title
 			{
 				let youWinTxt = "Game Over";
-				let youWinSize = GetTextSize(.Title);
-				let txtMeasure = MeasureText(youWinTxt, .Title);
+				let youWinSize = Text.GetTextSize(.Title);
+				let txtMeasure = Text.MeasureText(youWinTxt, .Title);
 
 				let x = Math.Lerp(UI_SCREEN_WIDTH, 0,
 					EasingFunctions.OutExpo(Math.Normalize(elapsedSeconds - TIME_BETWEEN_BOARDS_GAMEOVER, 0, 0.65f, true)));
-				DrawText(youWinTxt, .( (UI_SCREEN_WIDTH / 2) - (txtMeasure.x / 2) - x, (UI_SCREEN_HEIGHT / 2) - (youWinSize / 2) - 44), .Title, .Outline);
+				Text.DrawText(youWinTxt, .( (UI_SCREEN_WIDTH / 2) - (txtMeasure.x / 2) - x, (UI_SCREEN_HEIGHT / 2) - (youWinSize / 2) - 44), .Title, .Outline);
 			}
 			// "Game over" prompt
 			{
+#if BF_PLATFORM_ANDROID
+				let str = "Tap to restart!";
+#else
 				let str = "Click to restart!";
-				let txtMeasure = MeasureText(str, .Heading);
+#endif
+				let txtMeasure = Text.MeasureText(str, .Heading);
 
 				let x = Math.Lerp(-UI_SCREEN_WIDTH, 0,
 					EasingFunctions.OutExpo(Math.Normalize(elapsedSeconds - TIME_BETWEEN_BOARDS_GAMEOVER, 0, 0.65f, true)));
-				DrawText(str, .( (UI_SCREEN_WIDTH / 2) - (txtMeasure.x / 2) - x, (UI_SCREEN_HEIGHT / 2) + 44), .Heading, .Outline);
+				Text.DrawText(str, .( (UI_SCREEN_WIDTH / 2) - (txtMeasure.x / 2) - x, (UI_SCREEN_HEIGHT / 2) + 44), .Heading, .Outline);
 			}
 			// "Submit score" prompt
 			{
@@ -2283,7 +2347,7 @@ class Game : Scene
 			let clearedNumColor = Color(numColor.r, numColor.g, numColor.b, 125);
 
 			// Raylib.DrawText(numStr, ((int32)drawPos.x) - 2, ((int32)drawPos.y) - 4, 8, NUMBER_COLORS[number]);
-			DrawTextColored(numStr, .(((int32)drawPos.x) - 3, ((int32)drawPos.y) - 5), .Small, .NoOutline, m_State.Cleared[x, y] ? clearedNumColor : numColor);
+			Text.DrawTextColored(numStr, .(((int32)drawPos.x) - 3, ((int32)drawPos.y) - 5), .Small, .NoOutline, m_State.Cleared[x, y] ? clearedNumColor : numColor);
 			// Raylib.DrawTextEx(Assets.Fonts.More15Outline.Font, numStr, .(((int32)drawPos.x) - 5, ((int32)drawPos.y) - 12), 24, 1, .Black);
 		}
 
