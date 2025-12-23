@@ -39,7 +39,7 @@ android {
     compileSdk 35
 
     defaultConfig {
-        minSdk 24
+        minSdk 29 // <- __tls_get_addr https://github.com/android/ndk/issues/2069
         targetSdk 35
 
         applicationId project.properties['app.application_id']
@@ -58,7 +58,7 @@ android {
         manifestPlaceholders = [
             'GL_VERSION_CODE': getGLVersionCode(project.properties['gl.version']) ?: "0x00020000",
             'APP_LIB_NAME': project.properties['app.native_library_name'] ?: "raymob",
-            'APP_ORIENTATION': project.properties['app.orientation'] ?: "sensorLandscape",
+            'APP_ORIENTATION': project.properties['app.orientation'] ?: "landscape",
             'APP_CATEGORY': project.properties['app.category'] ?: "DEFAULT",
             'REQUIRE_INTERNET': project.properties['requirements.internet'] ?: "false",
             'REQUIRE_VIBRATION': project.properties['requirements.vibration'] ?: "false",
@@ -72,7 +72,10 @@ android {
                 def nativeLibName = project.findProperty('app.native_library_name') ?: 'raymob'
                 def glVersion = project.findProperty('gl.version') ?: 'ES20'
 
-                arguments "-DAPP_LIB_NAME=$nativeLibName", "-DGL_VERSION=$glVersion"
+                arguments "-DPLATFORM=Android",
+                          "-DBUILD_EXAMPLES=OFF",
+                          "-DAPP_LIB_NAME=$nativeLibName",
+                          "-DGL_VERSION=$glVersion"
             }
         }
 
@@ -84,9 +87,6 @@ android {
             }
         }
 
-        ndk {
-            abiFilters "arm64-v8a"
-        }
     }
 
     // Execute the preBuild task before the compilation
@@ -161,6 +161,7 @@ android {
     }
 }
 
+/*
 
 // Add your project's dependencies here.
 // This section is used to include external libraries or modules that your project relies on.
@@ -168,6 +169,7 @@ android {
 // To add a new dependency, use the 'implementation' or 'api' keyword followed by the library's coordinate or name.
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
+
 }
+
+*/

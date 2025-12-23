@@ -77,14 +77,20 @@ abstract class EntryPoint
 
 	public void Start(String[] args)
 	{
-		ConfigFlags flags = .FLAG_VSYNC_HINT | .FLAG_WINDOW_RESIZABLE;
-#if GAME_SCREEN_FREE
-#endif
+		ConfigFlags flags = .FLAG_VSYNC_HINT;
 		flags |= .FLAG_MSAA_4X_HINT;
 
 		Raylib.SetConfigFlags(flags);
 		Raylib.SetTraceLogLevel(.LOG_ERROR);
+
+#if BF_PLATFORM_ANDROID
+		// We set the window to 0,0 so it fullscreens on Android.
+		// Apparently, this is what you're supposed to do? Shrug...
+		Raylib.InitWindow(0, 0, "Minesweeper+");
+#else
+		flags |= .FLAG_WINDOW_RESIZABLE;
 		Raylib.InitWindow(BASE_SCREEN_WIDTH, BASE_SCREEN_HEIGHT, "Minesweeper+");
+#endif
 
 		// Load window icon
 		{
@@ -113,7 +119,7 @@ abstract class EntryPoint
 #endif
 		InitAssets();
 
-#if DEBUG
+#if DEBUG && !BF_PLATFORM_ANDROID
 		SetScene<Game>();
 #else
 		SetScene<Splashscreen>();

@@ -12,27 +12,25 @@
     <uses-permission android:name="android.permission.VIBRATE"
         android:required="${REQUIRE_VIBRATION}" />
 
+    <uses-feature android:name="android.hardware.sensor.gyroscope"
+        android:required="${REQUIRE_GYROSCOPE}" />
+
+    <uses-feature android:name="android.hardware.sensor.accelerometer"
+        android:required="${REQUIRE_ACCELEROMETER}" />
+
     <!-- Application config -->
 
     <application
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        tools:targetApi="31"
-
-        android:allowBackup="true"
-        android:appCategory="game"
-
-        android:isGame="true"
-        android:resizeableActivity="false"
-
-        android:supportsRtl="true"
-        android:hardwareAccelerated="true">
-
+        android:roundIcon="@mipmap/ic_launcher_round"
+        tools:targetApi="31">
         <activity
             android:name=".NativeLoader"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:screenOrientation="${APP_ORIENTATION}"
-            android:launchMode="singleTask"
+            android:configChanges="keyboardHidden|screenSize"
+            android:screenOrientation="${APP_ORIENTATION}" android:launchMode="singleTask"
+            android:resizeableActivity="false"
             android:clearTaskOnLaunch="true"
             android:exported="true">
             <intent-filter>

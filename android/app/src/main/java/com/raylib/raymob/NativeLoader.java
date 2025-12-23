@@ -28,9 +28,6 @@ import android.app.NativeActivity;
 import android.view.KeyEvent;
 import android.os.Bundle;
 
-import com.boxsubmus.minesweeper_plus.BuildConfig;
-import com.boxsubmus.minesweeper_plus.R;
-
 public class NativeLoader extends NativeActivity {
 
     public DisplayManager displayManager;
@@ -41,8 +38,6 @@ public class NativeLoader extends NativeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // setContentView(R.layout.activity_main);
-
         displayManager = new DisplayManager(this);
         softKeyboard = new SoftKeyboard(this);
         System.loadLibrary("raymob");   // Load your game library (don't change raymob, see gradle.properties)
